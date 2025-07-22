@@ -88,7 +88,7 @@ with abas[2]:
     for i in st.session_state.influencers_nomes:
         influencers_dispersao[i] = calcular_dispersao_likes_comentarios(i)
 
-    perfis_e_dispersoes = influencers_dispersao
+    st.session_state.perfis_e_dispersoes = influencers_dispersao
     
     # Criar apresentação dos dados
     try:
