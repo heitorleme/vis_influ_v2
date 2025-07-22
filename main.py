@@ -12,9 +12,12 @@ import traceback
 from func import interests_translation, consolidar_resumo_influenciadores, exibir_posts_comerciais_e_recentes, extrair_top_interesses_formatados, calcular_distribuicao_educacao, carregar_planilhas_estaticas, calcular_distribuicao_classes_sociais, exibir_cidades_por_influencer, exibir_analise_individual, consolidar_dados_de_perfil, format_milhar, get_classes_sociais_formatadas, get_escolaridades_formatadas, calcular_dispersao_likes_comentarios
 
 # Reset para não acumular uploads anteriores
-st.session_state.influencers_dados.clear()
-st.session_state.influencers_nomes.clear()
-st.session_state.df_cidades = pd.DataFrame()
+try:
+    st.session_state.influencers_dados.clear()
+    st.session_state.influencers_nomes.clear()
+    st.session_state.df_cidades = pd.DataFrame()
+except:
+	continue
 
 # Inicialização no session_state
 carregar_planilhas_estaticas()
