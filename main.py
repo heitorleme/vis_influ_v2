@@ -175,6 +175,8 @@ with abas[3]:
     interests_translation=interests_translation
     )
 
+    st.session_state.df_top_interesses = df_top_interesses
+
 ############ Publicações feitas pelo influenciador ###############
 with abas[4]:
     st.subheader("Selecione um influenciador para ver os posts 📸")
