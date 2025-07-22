@@ -161,7 +161,9 @@ with abas[3]:
 
     if not df_educacao_formatado.empty:
         st.table(df_educacao_formatado)
-    
+
+    st.session_state.df_educacao_formatado = df_educacao_formatado
+	
     # ============================
     # SEÇÃO: Extração de interesses da audiência 👫
     # ============================
