@@ -40,10 +40,10 @@ with abas[0]:
         st.session_state.influencers_nomes.clear()
         st.session_state.df_cidades = pd.DataFrame()
 
-                if "influencers_dados" not in st.session_state:
-                    st.session_state.influencers_dados = {}
-                    st.session_state.influencers_nomes = []
-                    st.session_state.df_cidades = pd.DataFrame()
+        if "influencers_dados" not in st.session_state:
+                st.session_state.influencers_dados = {}
+                st.session_state.influencers_nomes = []
+                st.session_state.df_cidades = pd.DataFrame()
 
         for file in uploaded_files:
             filename = file.name
