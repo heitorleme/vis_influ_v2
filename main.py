@@ -225,7 +225,7 @@ with abas[1]:
     format_milhar=format_milhar,
     get_classes_sociais_formatadas=get_classes_sociais_formatadas,
     get_escolaridades_formatadas=get_escolaridades_formatadas
-)
+    )
 
 
     if not df_resumo.empty:
