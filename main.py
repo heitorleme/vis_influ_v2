@@ -94,8 +94,16 @@ with abas[2]:
         st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
     
         influencers_dispersao = {}
-        for i in st.session_state.influencers_nomes:
-            influencers_dispersao[i] = calcular_dispersao_likes_comentarios(i)
+
+        influencers_nomes = st.session_state.get("influencers_nomes", [])
+        if isinstance(influencers_nomes, list) and all(isinstance(nome, str) for nome in influencers_nomes):
+            for nome in influencers_nomes:
+                try:
+                    influencers_dispersao[nome] = calcular_dispersao_likes_comentarios(nome)
+                except Exception as e:
+                    st.warning(f"Erro ao calcular dispersão para {nome}: {e}")
+        else:
+            st.warning("⚠️ A lista de influenciadores está vazia ou mal formatada.")
     
         st.session_state.perfis_e_dispersoes = influencers_dispersao
         
