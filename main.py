@@ -202,18 +202,18 @@ with abas[1]:
 
 
     if not df_resumo.empty:
-    st.title("Consolidação de Influenciadores")
-    st.table(df_resumo)
+        st.title("Consolidação de Influenciadores")
+        st.table(df_resumo)
 
-    file_name = "resumo_defesa_influenciadores.xlsx"
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_resumo.to_excel(writer, index=False, sheet_name='Defesa Influenciadores')
-    output.seek(0)
+        file_name = "resumo_defesa_influenciadores.xlsx"
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_resumo.to_excel(writer, index=False, sheet_name='Defesa Influenciadores')
+        output.seek(0)
 
-    st.download_button(
-        label="📥 Baixar tabela de resumo como Excel",
-        data=output,
-        file_name=file_name,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+        st.download_button(
+            label="📥 Baixar tabela de resumo como Excel",
+            data=output,
+            file_name=file_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
