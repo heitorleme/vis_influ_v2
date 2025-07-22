@@ -1,6 +1,7 @@
 # utils_format.py
 import streamlit as st
 from scipy.stats import norm
+import pandas as pd
 
 def exibir_cartao(titulo, valor):
     st.markdown(f"""
