@@ -41,36 +41,36 @@ with abas[0]:
 
     if uploaded_files:
     # Reset para não acumular uploads anteriores
-    st.session_state.influencers_dados.clear()
-    st.session_state.influencers_nomes.clear()
-    st.session_state.df_cidades = pd.DataFrame()
+        st.session_state.influencers_dados.clear()
+        st.session_state.influencers_nomes.clear()
+        st.session_state.df_cidades = pd.DataFrame()
 
-    for file in uploaded_files:
-        filename = file.name
-        partes = filename.split("_")
+        for file in uploaded_files:
+            filename = file.name
+            partes = filename.split("_")
 
-        if len(partes) > 1:
-            nome = partes[1][:-5]  # remove .json
-            try:
-                dados = json.load(file)
-                st.session_state.influencers_dados[nome] = dados
-                st.session_state.influencers_nomes.append(nome)
-
-                # Processar cidades
+            if len(partes) > 1:
+                nome = partes[1][:-5]  # remove .json
                 try:
-                    cities_entries = dados["audience_followers"]["data"]["audience_geo"]["cities"]
-                    df_temp = pd.json_normalize(cities_entries)
-                    df_temp["influencer"] = nome
-                    st.session_state.df_cidades = pd.concat([st.session_state.df_cidades, df_temp], ignore_index=True)
-                except Exception as e:
-                    st.warning(f"Sem registro de cidades para '{nome}': {e}")
+                    dados = json.load(file)
+                    st.session_state.influencers_dados[nome] = dados
+                    st.session_state.influencers_nomes.append(nome)
 
-            except Exception as e:
-                st.error(f"Erro ao carregar '{filename}': {e}")
+                    # Processar cidades
+                    try:
+                        cities_entries = dados["audience_followers"]["data"]["audience_geo"]["cities"]
+                        df_temp = pd.json_normalize(cities_entries)
+                        df_temp["influencer"] = nome
+                        st.session_state.df_cidades = pd.concat([st.session_state.df_cidades, df_temp], ignore_index=True)
+                    except Exception as e:
+                        st.warning(f"Sem registro de cidades para '{nome}': {e}")
+
+                except Exception as e:
+                    st.error(f"Erro ao carregar '{filename}': {e}")
+            else:
+                st.warning(f"O arquivo '{filename}' não segue o padrão esperado.")
         else:
-            st.warning(f"O arquivo '{filename}' não segue o padrão esperado.")
-    else:
-        st.info("Por favor, carregue arquivos JSON para começar.")
+            st.info("Por favor, carregue arquivos JSON para começar.")
 
     # Renomear coluna após upload
     if not st.session_state.df_cidades.empty:
