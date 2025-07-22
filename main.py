@@ -42,42 +42,47 @@ with abas[0]:
     st.markdown("### Uploader")
     uploaded_files = st.file_uploader("Carregue os arquivos JSON dos influencers", type="json", accept_multiple_files=True)
 
-    if uploaded_files:
-        if "influencers_dados" not in st.session_state:
-                st.session_state.influencers_dados = {}
-                st.session_state.influencers_nomes = []
-                st.session_state.df_cidades = pd.DataFrame()
+if uploaded_files:
+    # Inicializa os objetos no session_state apenas uma vez
+    if "influencers_dados" not in st.session_state:
+        st.session_state.influencers_dados = {}
+        st.session_state.influencers_nomes = []
+        st.session_state.df_cidades = pd.DataFrame()
 
-        for file in uploaded_files:
-            filename = file.name
-            partes = filename.split("_")
+    for file in uploaded_files:
+        filename = file.name
+        partes = filename.split("_")
 
-            if len(partes) > 1:
-                nome = partes[1][:-5]  # remove .json
+        if len(partes) > 1:
+            nome = partes[1][:-5]  # remove .json
+            try:
+                dados = json.load(file)
+                st.session_state.influencers_dados[nome] = dados
+                st.session_state.influencers_nomes.append(nome)
+
+                # Processar cidades
                 try:
-                    dados = json.load(file)
-                    st.session_state.influencers_dados[nome] = dados
-                    st.session_state.influencers_nomes.append(nome)
-
-                    # Processar cidades
-                    try:
-                        cities_entries = dados["audience_followers"]["data"]["audience_geo"]["cities"]
-                        df_temp = pd.json_normalize(cities_entries)
-                        df_temp["influencer"] = nome
-                        st.session_state.df_cidades = pd.concat([st.session_state.df_cidades, df_temp], ignore_index=True)
-                    except Exception as e:
-                        st.warning(f"Sem registro de cidades para '{nome}': {e}")
-
+                    cities_entries = dados["audience_followers"]["data"]["audience_geo"]["cities"]
+                    df_temp = pd.json_normalize(cities_entries)
+                    df_temp["influencer"] = nome
+                    st.session_state.df_cidades = pd.concat(
+                        [st.session_state.df_cidades, df_temp],
+                        ignore_index=True
+                    )
                 except Exception as e:
-                    st.error(f"Erro ao carregar '{filename}': {e}")
-            else:
-                st.warning(f"O arquivo '{filename}' não segue o padrão esperado.")
-        else:
-            st.info("Por favor, carregue arquivos JSON para começar.")
+                    st.warning(f"Sem registro de cidades para '{nome}': {e}")
 
-    # Renomear coluna após upload
+            except Exception as e:
+                st.error(f"Erro ao carregar '{filename}': {e}")
+        else:
+            st.warning(f"O arquivo '{filename}' não segue o padrão esperado.")
+
+    # Renomear coluna **dentro** do bloco upload_files
     if not st.session_state.df_cidades.empty:
         st.session_state.df_cidades.rename(columns={"name": "Cidade"}, inplace=True)
+
+else:
+    st.info("Por favor, carregue arquivos JSON para começar.")
 
 ############ Informações sobre o Influenciador ###############
 with abas[2]:
