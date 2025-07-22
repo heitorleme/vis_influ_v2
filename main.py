@@ -82,119 +82,128 @@ with abas[0]:
 ############ Informações sobre o Influenciador ###############
 with abas[2]:
     st.markdown("## Análise Geral 👨‍💻")
-    # ============================
-    # SEÇÃO: Cálculo da dispersão de likes/comentários 🔗
-    # ============================
-    st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
-
-    influencers_dispersao = {}
-    for i in st.session_state.influencers_nomes:
-        influencers_dispersao[i] = calcular_dispersao_likes_comentarios(i)
-
-    st.session_state.perfis_e_dispersoes = influencers_dispersao
+    if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
+        # ============================
+        # SEÇÃO: Cálculo da dispersão de likes/comentários 🔗
+        # ============================
+        st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
     
-    # Criar apresentação dos dados
-    try:
-	# Transformar o dicionário em uma lista de dicionários
-        dist_list = [{'Perfil': k, 'Dispersão': v} for k, v in influencers_dispersao.items()]
+        influencers_dispersao = {}
+        for i in st.session_state.influencers_nomes:
+            influencers_dispersao[i] = calcular_dispersao_likes_comentarios(i)
     
-    # Criar DataFrame a partir da lista
-        dist_df = pd.DataFrame(dist_list)
-
-    # Exibir no Streamlit
-        st.dataframe(dist_df)
-
-    except Exception as e:
-        st.warning(f"Ocorreu um erro ao criar o DataFrame: {e}")
+        st.session_state.perfis_e_dispersoes = influencers_dispersao
+        
+        # Criar apresentação dos dados
+        try:
+    	# Transformar o dicionário em uma lista de dicionários
+            dist_list = [{'Perfil': k, 'Dispersão': v} for k, v in influencers_dispersao.items()]
+        
+        # Criar DataFrame a partir da lista
+            dist_df = pd.DataFrame(dist_list)
     
-    # ============================
-    # SEÇÃO: Extração da credibilidade da audiência 👫
-    # ============================
-	# st.subheader("Score da Audiência 👫")
-	# A desenvolver - precisamos identificar uma forma de calcular o Score a partir dos dados disponíveis
-
-    # ============================
-    # SEÇÃO: Estatísticas básicas (visualizações, engajamento, etc)
-    # ============================
-    st.markdown("### Dados Básicos por Influencer 📊")
-    df_consolidado = consolidar_dados_de_perfil()
+        # Exibir no Streamlit
+            st.dataframe(dist_df)
     
-    if not df_consolidado.empty:
-        st.dataframe(df_consolidado)
+        except Exception as e:
+            st.warning(f"Ocorreu um erro ao criar o DataFrame: {e}")
+        
+        # ============================
+        # SEÇÃO: Extração da credibilidade da audiência 👫
+        # ============================
+    	# st.subheader("Score da Audiência 👫")
+    	# A desenvolver - precisamos identificar uma forma de calcular o Score a partir dos dados disponíveis
     
-    # ============================
-    # SEÇÃO: Análise Individual, por Influ 📈
-    # ============================
-    st.markdown("## Análise Individual, por Influenciador 🔍")
-
-    # Dropdown para seleção do influenciador
-    influenciador_selecionado = st.selectbox("Selecione um influenciador:", st.session_state.influencers_nomes)
+        # ============================
+        # SEÇÃO: Estatísticas básicas (visualizações, engajamento, etc)
+        # ============================
+        st.markdown("### Dados Básicos por Influencer 📊")
+        df_consolidado = consolidar_dados_de_perfil()
+        
+        if not df_consolidado.empty:
+            st.dataframe(df_consolidado)
+        
+        # ============================
+        # SEÇÃO: Análise Individual, por Influ 📈
+        # ============================
+        st.markdown("## Análise Individual, por Influenciador 🔍")
     
-    # Exibição dos dados
-    if influenciador_selecionado:
-        exibir_analise_individual(influenciador_selecionado)
-
+        # Dropdown para seleção do influenciador
+        influenciador_selecionado = st.selectbox("Selecione um influenciador:", st.session_state.influencers_nomes)
+        
+        # Exibição dos dados
+        if influenciador_selecionado:
+            exibir_analise_individual(influenciador_selecionado)
+    else:
+        st.warning("Por favor, faça o upload dos arquivos na aba 1 antes de prosseguir.")
 ############ Informações sobre a audiência ###############
 with abas[3]:
     st.markdown("## Dados relativos à audiência 👨‍💻")
-    # ============================
-    # SEÇÃO: Dispersão geográfica da audiência
-    # ============================
-    st.markdown("### Cidades da audiência, por Influencer 🧐")
-    exibir_cidades_por_influencer(st.session_state.df_cidades)
-
-    # ============================
-    # SEÇÃO: Classes Sociais por Influencer
-    # ============================
-    df_classes_formatado = calcular_distribuicao_classes_sociais(st.session_state.df_cidades, "./dados/classes_sociais_por_cidade.xlsx")
-
-    if not df_classes_formatado.empty:
-        st.markdown("### Distribuição de Classes Sociais 🎯")
-        st.table(df_classes_formatado)
-
-    st.session_state.df_classes_formatado = df_classes_formatado
+    if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
+        # ============================
+        # SEÇÃO: Dispersão geográfica da audiência
+        # ============================
+        st.markdown("### Cidades da audiência, por Influencer 🧐")
+        exibir_cidades_por_influencer(st.session_state.df_cidades)
     
-    # ============================
-    # SEÇÃO: Educação por Influencer
-    # ============================
-    st.subheader("Análise de Educação por Influencer 📚")
+        # ============================
+        # SEÇÃO: Classes Sociais por Influencer
+        # ============================
+        df_classes_formatado = calcular_distribuicao_classes_sociais(st.session_state.df_cidades, "./dados/classes_sociais_por_cidade.xlsx")
+    
+        if not df_classes_formatado.empty:
+            st.markdown("### Distribuição de Classes Sociais 🎯")
+            st.table(df_classes_formatado)
+    
+        st.session_state.df_classes_formatado = df_classes_formatado
+        
+        # ============================
+        # SEÇÃO: Educação por Influencer
+        # ============================
+        st.subheader("Análise de Educação por Influencer 📚")
+    
+        df_educacao_formatado = calcular_distribuicao_educacao(
+            df_cidades=st.session_state.df_cidades,
+            df_dados=st.session_state.influencers_dados
+        )
+    
+        if not df_educacao_formatado.empty:
+            st.table(df_educacao_formatado)
+    
+        st.session_state.df_educacao_formatado = df_educacao_formatado
+    	
+        # ============================
+        # SEÇÃO: Extração de interesses da audiência 👫
+        # ============================
+        st.markdown("### Interesses da Audiência 👫")
+        df_top_interesses = extrair_top_interesses_formatados(
+        dados_influencers=st.session_state.influencers_dados,
+        interests_translation=interests_translation
+        )
+    
+        st.session_state.df_top_interesses = df_top_interesses
 
-    df_educacao_formatado = calcular_distribuicao_educacao(
-        df_cidades=st.session_state.df_cidades,
-        df_dados=st.session_state.influencers_dados
-    )
-
-    if not df_educacao_formatado.empty:
-        st.table(df_educacao_formatado)
-
-    st.session_state.df_educacao_formatado = df_educacao_formatado
-	
-    # ============================
-    # SEÇÃO: Extração de interesses da audiência 👫
-    # ============================
-    st.markdown("### Interesses da Audiência 👫")
-    df_top_interesses = extrair_top_interesses_formatados(
-    dados_influencers=st.session_state.influencers_dados,
-    interests_translation=interests_translation
-    )
-
-    st.session_state.df_top_interesses = df_top_interesses
+    else:
+        st.warning("Por favor, faça o upload dos arquivos na aba 1 antes de prosseguir.")
 
 ############ Publicações feitas pelo influenciador ###############
 with abas[4]:
-    st.subheader("Selecione um influenciador para ver os posts 📸")
-
-    influenciador_selecionado = st.selectbox(
-        "Influenciador:", 
-        st.session_state.influencers_nomes, 
-        key="select_influencer_posts"
-    )
-
-    if influenciador_selecionado:
-        exibir_posts_comerciais_e_recentes(
-            nome_influenciador=influenciador_selecionado,
-            dados_influencers=st.session_state.influencers_dados
+    if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
+        st.subheader("Selecione um influenciador para ver os posts 📸")
+    
+        influenciador_selecionado = st.selectbox(
+            "Influenciador:", 
+            st.session_state.influencers_nomes, 
+            key="select_influencer_posts"
         )
+    
+        if influenciador_selecionado:
+            exibir_posts_comerciais_e_recentes(
+                nome_influenciador=influenciador_selecionado,
+                dados_influencers=st.session_state.influencers_dados
+            )
+    else:
+        st.warning("Por favor, faça o upload dos arquivos na aba 1 antes de prosseguir.")
 
 ############ Resumo dos Influenciadores ###############
 with abas[1]:
