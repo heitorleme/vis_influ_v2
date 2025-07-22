@@ -148,6 +148,8 @@ with abas[3]:
     if not df_classes_formatado.empty:
         st.markdown("### Distribuição de Classes Sociais 🎯")
         st.table(df_classes_formatado)
+
+    st.session_state.df_classes_formatado = df_classes_formatado
     
     # ============================
     # SEÇÃO: Educação por Influencer
