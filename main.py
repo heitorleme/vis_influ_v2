@@ -143,7 +143,7 @@ with abas[3]:
     # ============================
     # SEÇÃO: Classes Sociais por Influencer
     # ============================
-    df_classes_formatado = calcular_distribuicao_classes_sociais(st.session_state.df_cidades, URL_CLASSES)
+    df_classes_formatado = calcular_distribuicao_classes_sociais(st.session_state.df_cidades, "./dados/classes_sociais_por_cidade.xlsx")
 
     if not df_classes_formatado.empty:
         st.markdown("### Distribuição de Classes Sociais 🎯")
