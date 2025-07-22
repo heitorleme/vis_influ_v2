@@ -213,8 +213,8 @@ with abas[4]:
 ############ Resumo dos Influenciadores ###############
 with abas[1]:
     if "influencers_dados" not in st.session_state:
-    st.warning("⚠️ Nenhum arquivo foi carregado. Volte para a aba 1 e envie os arquivos JSON.")
-    st.stop()  # evita execução do restante
+        st.warning("⚠️ Nenhum arquivo foi carregado. Volte para a aba 1 e envie os arquivos JSON.")
+        st.stop()  # evita execução do restante
     
     df_resumo = consolidar_resumo_influenciadores(
     dados_influencers=st.session_state.influencers_dados,
