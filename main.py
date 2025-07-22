@@ -17,7 +17,7 @@ try:
     st.session_state.influencers_nomes.clear()
     st.session_state.df_cidades = pd.DataFrame()
 except:
-	continue
+    continue
 
 # Inicialização no session_state
 carregar_planilhas_estaticas()
