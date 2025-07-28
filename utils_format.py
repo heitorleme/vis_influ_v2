@@ -71,46 +71,30 @@ def formatar_tabela_classes_sociais(df_result):
         for idx, row in df_result.iterrows()
     ])
 
-def formatar_tabela_distribuicao_educacao(result_edu, std_dev=3):
+def formatar_tabela_distribuicao_educacao(total_anos_por_influencer, std_dev=3):
     """
-    Recebe um DataFrame com a média ponderada de anos de escolaridade e
-    retorna uma tabela formatada com faixas educacionais por influencer.
+    Recebe uma Series com a soma total de anos de escolaridade (feminino + masculino) por influencer,
+    e retorna uma tabela formatada com faixas educacionais estimadas com base em uma distribuição normal.
     """
     dist_list = []
 
-    for _, row in result_edu.iterrows():
-        influencer = row["influencer"]
-        mean = row["Escolaridade_Média_Ponderada"]
-
+    for influencer, mean in total_anos_por_influencer.items():
         prob_less_5 = norm.cdf(5, mean, std_dev) * 100
         prob_5_9 = (norm.cdf(9, mean, std_dev) - norm.cdf(5, mean, std_dev)) * 100
         prob_9_12 = (norm.cdf(12, mean, std_dev) - norm.cdf(9, mean, std_dev)) * 100
         prob_more_12 = (1 - norm.cdf(12, mean, std_dev)) * 100
 
         dist_list.append({
-            "Influencer": influencer,
-            "< 5 anos": round(prob_less_5, 2),
-            "5-9 anos": round(prob_5_9, 2),
-            "9-12 anos": round(prob_9_12, 2),
-            "> 12 anos": round(prob_more_12, 2)
+            "influencer": influencer,
+            "educacao_formatada": "  \n".join([
+                f"< 5 anos: {prob_less_5:.2f}%",
+                f"5–9 anos: {prob_5_9:.2f}%",
+                f"9–12 anos: {prob_9_12:.2f}%",
+                f"12+ anos: {prob_more_12:.2f}%"
+            ])
         })
 
-    dist_df = pd.DataFrame(dist_list)
-
-    df_formatado = pd.DataFrame([
-        {
-            "influencer": row["Influencer"],
-            "educacao_formatada": "  \n".join([
-                f"< 5 anos: {row['< 5 anos']:.2f}%",
-                f"5–9 anos: {row['5-9 anos']:.2f}%",
-                f"9–12 anos: {row['9-12 anos']:.2f}%",
-                f"12+ anos: {row['> 12 anos']:.2f}%"
-            ])
-        }
-        for _, row in dist_df.iterrows()
-    ])
-
-    return df_formatado
+    return pd.DataFrame(dist_list)
 
 def exibir_cards_de_posts(lista_posts):
     """
