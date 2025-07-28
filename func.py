@@ -325,7 +325,7 @@ def calcular_distribuicao_classes_sociais(df_cidades, url_planilha_classes):
         # Agregar resultado por influencer
         result = df_merged.groupby("influencer")[
             ["normalized_classe_de", "normalized_classe_c", "normalized_classe_b", "normalized_classe_a"]
-        ].sum() * 100
+        ].sum()
         result = result.round(2)
 
         # Formatar resultado para exibição
@@ -380,36 +380,36 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
 
         df["Cidade"] = df["name"]
         df_unido = pd.merge(df, df_ages, on="influencer")
-        df_unido.rename(columns={"code": "faixa etária"}, inplace=True)
+
+		# Primeiro, soma total de weight por influencer
+        total_weight_por_influencer = df_unido.groupby("influencer")["weight"].transform("sum")
+
+        # Depois, soma de weight por influencer + cidade
+        total_weight_por_cidade = df_unido.groupby(["influencer", "Cidade"])["weight"].transform("sum")
+
+        # Agora, atribuímos o weight normalizado (valor da cidade dividido pela soma total do influencer)
+        df_unido["weight_normalized"] = total_weight_por_cidade / total_weight_por_influencer
+
+        # Normalizar os pesos dos gêneros
+        df_unido["male_weighted"] = df_unido["male"] * df_unido["weight_normalized"]
+        df_unido["female_weighted"] = df_unido["female"] * df_unido["weight_normalized"]
+		
+        df_unido.rename(columns={"name": "Cidade", "code":"Grupo Etário", "male":"Proporção Male", "female":"Proporção Female"}, errors="raise", inplace=True)
 
         # Carregar dados educacionais do session_state
         df_edu = st.session_state.df_educacao_por_cidade
 
-        df_edu_longo = pd.melt(df_edu,
-                               id_vars="Cidade",
-                               var_name="grupo",
-                               value_name="average_years_of_education")
+        df_unido_edu = df_unido.merge(df_edu, on=["Cidade", "Grupo Etário"], how="left")
 
-        df_edu_longo['gender'] = df_edu_longo['grupo'].str.extract(r'^(Homens|Mulheres)')
-        df_edu_longo['faixa etária'] = df_edu_longo['grupo'].str.extract(r'(\d+\-\d+|\d+\+|\d+\-)')
+        # Construir anos_female e anos_male
+        df_unido_edu["anos_female"] = df_unido_edu["female_weighted"] * df_unido_edu["female"]
+        df_unido_edu["anos_male"] = df_unido_edu["male_weighted"] * df_unido_edu["male"]
 
         # Calcular pesos ponderados
         df_unido["male_weighted"] = df_unido["male"] * df_unido["weight"]
         df_unido["female_weighted"] = df_unido["female"] * df_unido["weight"]
 
-        df_merged = pd.merge(df_unido, df_edu_longo, on=["Cidade", "faixa etária"], how="inner")
-
-        df_merged["contribution"] = df_merged.apply(
-            lambda row: row["average_years_of_education"] * row["male_weighted"] * 2
-            if row["gender"] == "Homens"
-            else row["average_years_of_education"] * row["female_weighted"] * 2,
-            axis=1
-        )
-
-        result_edu = df_merged.groupby('influencer').agg(
-            Escolaridade_Média_Ponderada=('contribution', 'sum')
-        ).reset_index()
-        result_edu["Escolaridade_Média_Ponderada"] = result_edu["Escolaridade_Média_Ponderada"].round(2)
+		result_edu = df_unido_edu.groupby("influencer")[["anos_female", "anos_male"]].sum().sum(axis=1)
 
         return formatar_tabela_distribuicao_educacao(result_edu)
 
