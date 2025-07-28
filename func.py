@@ -549,7 +549,7 @@ def consolidar_resumo_influenciadores(
             dispersion = int(round(perfis_e_dispersoes.get(username, 0), 0)) if username in perfis_e_dispersoes else "N/A"
             alcance = format_milhar(perfil.get("avg_reels_plays"))
             classe_social = get_classes_sociais_formatadas(df_classes_formatado, username)
-            escolaridade = _formatadas(df_educacao_formatado, username)
+            escolaridade = get_escolaridades_formatadas(df_educacao_formatado, username)
 
             interesses = df_top_interesses_formatado.loc[
                 df_top_interesses_formatado["influencer"] == username,
