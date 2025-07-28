@@ -76,25 +76,28 @@ def formatar_tabela_distribuicao_educacao(total_anos_por_influencer, std_dev=3):
     Recebe uma Series com a soma total de anos de escolaridade (feminino + masculino) por influencer,
     e retorna uma tabela formatada com faixas educacionais estimadas com base em uma distribuição normal.
     """
-    dist_list = []
-
+    linhas = []
     for influencer, mean in total_anos_por_influencer.items():
-        prob_less_5 = norm.cdf(5, mean, std_dev) * 100
-        prob_5_9 = (norm.cdf(9, mean, std_dev) - norm.cdf(5, mean, std_dev)) * 100
-        prob_9_12 = (norm.cdf(12, mean, std_dev) - norm.cdf(9, mean, std_dev)) * 100
-        prob_more_12 = (1 - norm.cdf(12, mean, std_dev)) * 100
-
-        dist_list.append({
+        p1 = norm.cdf(5, mean, std_dev) * 100
+        p2 = (norm.cdf(9, mean, std_dev) - norm.cdf(5, mean, std_dev)) * 100
+        p3 = (norm.cdf(12, mean, std_dev) - norm.cdf(9, mean, std_dev)) * 100
+        p4 = 100 - (p1 + p2 + p3)  # garante fechar 100%
+        linhas.append({
             "influencer": influencer,
-            "educacao_formatada": "  \n".join([
-                f"< 5 anos: {prob_less_5:.2f}%",
-                f"5–9 anos: {prob_5_9:.2f}%",
-                f"9–12 anos: {prob_9_12:.2f}%",
-                f"12+ anos: {prob_more_12:.2f}%"
-            ])
+            "< 5 anos (%)": p1,
+            "5–9 anos (%)": p2,
+            "9–12 anos (%)": p3,
+            "12+ anos (%)": p4
         })
-
-    return pd.DataFrame(dist_list)
+        
+    df = pd.DataFrame(linhas)
+    df["educacao_formatada"] = (
+        df["< 5 anos (%)"].map("{:.2f}%".format) + "  \n" +
+        df["5–9 anos (%)"].map("{:.2f}%".format) + "  \n" +
+        df["9–12 anos (%)"].map("{:.2f}%".format) + "  \n" +
+        df["12+ anos (%)"].map("{:.2f}%".format)
+    )
+    return df[["influencer", "educacao_formatada"]]
 
 def exibir_cards_de_posts(lista_posts):
     """
