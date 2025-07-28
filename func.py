@@ -405,11 +405,7 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         df_unido_edu["anos_female"] = df_unido_edu["female_weighted"] * df_unido_edu["female"]
         df_unido_edu["anos_male"] = df_unido_edu["male_weighted"] * df_unido_edu["male"]
 
-        # Calcular pesos ponderados
-        df_unido["male_weighted"] = df_unido["male"] * df_unido["weight"]
-        df_unido["female_weighted"] = df_unido["female"] * df_unido["weight"]
-
-		result_edu = df_unido_edu.groupby("influencer")[["anos_female", "anos_male"]].sum().sum(axis=1)
+        result_edu = df_unido_edu.groupby("influencer")[["anos_female", "anos_male"]].sum().sum(axis=1)
 
         return formatar_tabela_distribuicao_educacao(result_edu)
 
