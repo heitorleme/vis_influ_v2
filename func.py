@@ -75,9 +75,11 @@ def get_classes_sociais_formatadas(df, nome_influencer):
     resultado = df.loc[df["influencer"] == nome_influencer, "classes_sociais_formatadas"].values
     return resultado[0] if len(resultado) > 0 else "N/A"
 
-def get_escolaridades_formatadas(df, nome_influencer):
-    resultado = df.loc[df["influencer"] == nome_influencer, "educacao_formatada"].values
-    return resultado[0] if len(resultado) > 0 else "N/A"
+def get_escolaridades_formatadas(df, nome_influencer, default="N/A"):
+    if "influencer" not in df.columns or "educacao_formatada" not in df.columns:
+        return default
+    vals = df.loc[df["influencer"].eq(nome_influencer), "educacao_formatada"]
+    return vals.iloc[0] if not vals.empty else default
 
 def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233msh6b5402b6234f32ep135c63jsn7b9cdd64c9f7"):
     """
@@ -381,7 +383,7 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         df["Cidade"] = df["name"]
         df_unido = pd.merge(df, df_ages, on="influencer")
 
-		# Primeiro, soma total de weight por influencer
+	# Primeiro, soma total de weight por influencer
         total_weight_por_influencer = df_unido.groupby("influencer")["weight"].transform("sum")
 
         # Depois, soma de weight por influencer + cidade
@@ -547,7 +549,7 @@ def consolidar_resumo_influenciadores(
             dispersion = int(round(perfis_e_dispersoes.get(username, 0), 0)) if username in perfis_e_dispersoes else "N/A"
             alcance = format_milhar(perfil.get("avg_reels_plays"))
             classe_social = get_classes_sociais_formatadas(df_classes_formatado, username)
-            escolaridade = get_escolaridades_formatadas(df_educacao_formatado, username)
+            escolaridade = _formatadas(df_educacao_formatado, username)
 
             interesses = df_top_interesses_formatado.loc[
                 df_top_interesses_formatado["influencer"] == username,
