@@ -93,12 +93,23 @@ with abas[2]:
         
         influencers_dispersao = {}
 
-        # Pegando a lista original
-        raw_nomes = st.session_state.get("influencers_nomes", None)
-
-        # Exibindo no app o tipo e o conteúdo para debug
-        st.write("🧪 Debug - Tipo de influencers_nomes:", type(raw_nomes))
-        st.write("🧪 Debug - Conteúdo de influencers_nomes:", raw_nomes)
+       # Conversão segura dos nomes
+	raw_nomes = st.session_state.get("influencers_nomes", [])
+	
+	# Normalizar: se vier no formato [{0: "reviewsporsp"}] ou algo assim
+	influencers_nomes = []
+	
+	if isinstance(raw_nomes, list):
+	    for item in raw_nomes:
+	        if isinstance(item, str):
+	            influencers_nomes.append(item)
+	        elif isinstance(item, dict):
+	            influencers_nomes.extend(str(v) for v in item.values() if isinstance(v, str))
+	else:
+	    st.warning("Formato inesperado em influencers_nomes.")
+	
+	# Debug para confirmação após o parse
+	st.write("✅ Influencers extraídos:", influencers_nomes)
 
         # Corrigindo para uma lista de strings segura
         if isinstance(raw_nomes, str):
