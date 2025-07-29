@@ -87,21 +87,24 @@ else:
 ############ Informações sobre o Influenciador ###############
 with abas[2]:
     st.markdown("## Análise Geral 👨‍💻")
-    if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
-        # ============================
-        # SEÇÃO: Cálculo da dispersão de likes/comentários 🔗
-        # ============================
-        st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
     
+    if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
+        st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
+        
         influencers_dispersao = {}
 
-        influencers_nomes_raw = st.session_state.get("influencers_nomes", [])
+        # Pegando a lista original
+        raw_nomes = st.session_state.get("influencers_nomes", None)
 
-# Garante que será uma lista de strings
-        if isinstance(influencers_nomes_raw, str):
-            influencers_nomes = [influencers_nomes_raw]
-        elif isinstance(influencers_nomes_raw, list):
-            influencers_nomes = [nome for nome in influencers_nomes_raw if isinstance(nome, str)]
+        # Exibindo no app o tipo e o conteúdo para debug
+        st.write("🧪 Debug - Tipo de influencers_nomes:", type(raw_nomes))
+        st.write("🧪 Debug - Conteúdo de influencers_nomes:", raw_nomes)
+
+        # Corrigindo para uma lista de strings segura
+        if isinstance(raw_nomes, str):
+            influencers_nomes = [raw_nomes]
+        elif isinstance(raw_nomes, list):
+            influencers_nomes = [n for n in raw_nomes if isinstance(n, str)]
         else:
             influencers_nomes = []
 
@@ -110,10 +113,10 @@ with abas[2]:
                 try:
                     influencers_dispersao[nome] = calcular_dispersao_likes_comentarios(nome)
                 except Exception as e:
-                    st.warning(f"Erro ao calcular dispersão para {nome}: {e}")
+                    st.warning(f"Erro ao calcular dispersão para '{nome}': {e}")
         else:
             st.warning("⚠️ A lista de influenciadores está vazia ou mal formatada.")
-    
+
         st.session_state.perfis_e_dispersoes = influencers_dispersao
         
         # Criar apresentação dos dados
