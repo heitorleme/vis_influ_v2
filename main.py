@@ -91,25 +91,25 @@ with abas[2]:
     if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
         st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
         
-        influencers_dispersao = {}
+    influencers_dispersao = {}
 
        # Conversão segura dos nomes
-	raw_nomes = st.session_state.get("influencers_nomes", [])
+    raw_nomes = st.session_state.get("influencers_nomes", [])
 	
 	# Normalizar: se vier no formato [{0: "reviewsporsp"}] ou algo assim
-	influencers_nomes = []
+    influencers_nomes = []
 	
-	if isinstance(raw_nomes, list):
-	    for item in raw_nomes:
-	        if isinstance(item, str):
-	            influencers_nomes.append(item)
-	        elif isinstance(item, dict):
-	            influencers_nomes.extend(str(v) for v in item.values() if isinstance(v, str))
-	else:
-	    st.warning("Formato inesperado em influencers_nomes.")
+    if isinstance(raw_nomes, list):
+        for item in raw_nomes:
+            if isinstance(item, str):
+                influencers_nomes.append(item)
+            elif isinstance(item, dict):
+                influencers_nomes.extend(str(v) for v in item.values() if isinstance(v, str))
+    else:
+        st.warning("Formato inesperado em influencers_nomes.")
 	
 	# Debug para confirmação após o parse
-	st.write("✅ Influencers extraídos:", influencers_nomes)
+    st.write("✅ Influencers extraídos:", influencers_nomes)
 
         # Corrigindo para uma lista de strings segura
         if isinstance(raw_nomes, str):
