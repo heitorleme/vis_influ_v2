@@ -107,7 +107,7 @@ with abas[2]:
         else:
             influencers_nomes = [str(raw_nomes)]
     
-    for nome in influencers_nomes:
+    for nome in [influencers_nomes]:
                 try:
                     influencers_dispersao[nome] = calcular_dispersao_likes_comentarios(nome)
                 except Exception as e:
