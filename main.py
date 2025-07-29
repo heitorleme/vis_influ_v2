@@ -88,7 +88,7 @@ else:
 with abas[2]:
     st.markdown("## Análise Geral 👨‍💻")
     
-    if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
+    if "influencers_nomes" in st.session_state and st.session_state.influencers_nomes:
         st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
         
     influencers_dispersao = {}
