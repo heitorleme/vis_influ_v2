@@ -106,8 +106,13 @@ with abas[2]:
             influencers_nomes = [str(item) for item in raw_nomes if isinstance(item, (str, int, float))]
         else:
             influencers_nomes = [str(raw_nomes)]
-
-    st.write("✅ Influencers normalizados:", influencers_nomes)
+    
+    for nome in influencers_nomes:
+                try:
+                    influencers_dispersao[nome] = calcular_dispersao_likes_comentarios(nome)
+                except Exception as e:
+                    st.warning(f"Erro ao calcular dispersão para {nome}: {e}")
+    
     st.session_state.perfis_e_dispersoes = influencers_dispersao
         
         # Criar apresentação dos dados
