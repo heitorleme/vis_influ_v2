@@ -86,63 +86,45 @@ else:
 
 ############ Informações sobre o Influenciador ###############
 with abas[2]:
-        st.markdown("## Análise Geral 👨‍💻")
+    st.markdown("## Análise Geral 👨‍💻")
     
-        if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
-                st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
+    if "influencers_dados" in st.session_state and st.session_state.influencers_dados:
+        st.markdown("### Dispersão de Likes e Comments, por Influencer 🧐")
         
-        influencers_dispersao = {}
+    influencers_dispersao = {}
 
-       # Conversão segura dos nomes
-        raw_nomes = st.session_state.get("influencers_nomes", [])
+    # Conversão segura dos nomes
+    raw_nomes = st.session_state.get("influencers_nomes", [])
 	
-	# Normalizar: se vier no formato [{0: "reviewsporsp"}] ou algo assim
-        influencers_nomes = []
+    # Normalizar: se vier no formato [{0: "reviewsporsp"}] ou algo assim
+    influencers_nomes = []
 	
-        if isinstance(raw_nomes, list):
-                for item in raw_nomes:
-                        if isinstance(item, str):
-                                influencers_nomes.append(item)
-                        elif isinstance(item, dict):
-                                influencers_nomes.extend(str(v) for v in item.values() if isinstance(v, str))
-                        else:
-                                st.warning("Formato inesperado em influencers_nomes.")
+    if isinstance(raw_nomes, list):
+        for item in raw_nomes:
+        if isinstance(item, str):
+            influencers_nomes.append(item)
+        elif isinstance(item, dict):
+            influencers_nomes.extend(str(v) for v in item.values() if isinstance(v, str))
+        else:
+            st.warning("Formato inesperado em influencers_nomes.")
 	
 	# Debug para confirmação após o parse
-        st.write("✅ Influencers extraídos:", influencers_nomes)
-
-        # Corrigindo para uma lista de strings segura
-        if isinstance(raw_nomes, str):
-            influencers_nomes = [raw_nomes]
-        elif isinstance(raw_nomes, list):
-            influencers_nomes = [n for n in raw_nomes if isinstance(n, str)]
-        else:
-            influencers_nomes = []
-
-        if influencers_nomes:
-            for nome in influencers_nomes:
-                try:
-                    influencers_dispersao[nome] = calcular_dispersao_likes_comentarios(nome)
-                except Exception as e:
-                    st.warning(f"Erro ao calcular dispersão para '{nome}': {e}")
-        else:
-            st.warning("⚠️ A lista de influenciadores está vazia ou mal formatada.")
-
-        st.session_state.perfis_e_dispersoes = influencers_dispersao
+    st.write("✅ Influencers extraídos:", influencers_nomes)
+    st.session_state.perfis_e_dispersoes = influencers_dispersao
         
         # Criar apresentação dos dados
-        try:
+    try:
     	# Transformar o dicionário em uma lista de dicionários
-            dist_list = [{'Perfil': k, 'Dispersão': v} for k, v in influencers_dispersao.items()]
+        dist_list = [{'Perfil': k, 'Dispersão': v} for k, v in influencers_dispersao.items()]
         
         # Criar DataFrame a partir da lista
-            dist_df = pd.DataFrame(dist_list)
+        dist_df = pd.DataFrame(dist_list)
     
         # Exibir no Streamlit
-            st.dataframe(dist_df)
+        st.dataframe(dist_df)
     
-        except Exception as e:
-            st.warning(f"Ocorreu um erro ao criar o DataFrame: {e}")
+    except Exception as e:
+        st.warning(f"Ocorreu um erro ao criar o DataFrame: {e}")
         
         # ============================
         # SEÇÃO: Extração da credibilidade da audiência 👫
@@ -153,23 +135,23 @@ with abas[2]:
         # ============================
         # SEÇÃO: Estatísticas básicas (visualizações, engajamento, etc)
         # ============================
-        st.markdown("### Dados Básicos por Influencer 📊")
-        df_consolidado = consolidar_dados_de_perfil()
+    st.markdown("### Dados Básicos por Influencer 📊")
+    df_consolidado = consolidar_dados_de_perfil()
         
-        if not df_consolidado.empty:
-            st.dataframe(df_consolidado)
+    if not df_consolidado.empty:
+        st.dataframe(df_consolidado)
         
         # ============================
         # SEÇÃO: Análise Individual, por Influ 📈
         # ============================
-        st.markdown("## Análise Individual, por Influenciador 🔍")
+    st.markdown("## Análise Individual, por Influenciador 🔍")
     
-        # Dropdown para seleção do influenciador
-        influenciador_selecionado = st.selectbox("Selecione um influenciador:", st.session_state.influencers_nomes)
+    # Dropdown para seleção do influenciador
+    influenciador_selecionado = st.selectbox("Selecione um influenciador:", st.session_state.influencers_nomes)
         
-        # Exibição dos dados
-        if influenciador_selecionado:
-            exibir_analise_individual(influenciador_selecionado)
+    # Exibição dos dados
+    if influenciador_selecionado:
+        exibir_analise_individual(influenciador_selecionado)
     else:
         st.warning("Por favor, faça o upload dos arquivos na aba 1 antes de prosseguir.")
 ############ Informações sobre a audiência ###############
