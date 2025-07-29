@@ -109,7 +109,6 @@ def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233m
 
         if "data" not in results or "items" not in results["data"]:
             st.warning(f"Resposta inválida para o perfil '{perfil}'.")
-            continue
 
         n_posts = min(12, len(results["data"]["items"]))
 
