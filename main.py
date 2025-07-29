@@ -103,7 +103,7 @@ with abas[2]:
     except AttributeError:
     # Se não tiver .values, tenta iterar diretamente
         if isinstance(raw_nomes, list):
-            influencers_nomes = [str(item) for index, item in raw_nomes]
+            influencers_nomes = [str(item) for item in raw_nomes]
         else:
             influencers_nomes = [str(raw_nomes)]
     
