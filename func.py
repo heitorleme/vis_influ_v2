@@ -86,7 +86,7 @@ def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233m
     Calcula a dispersão de likes e comentários dos últimos posts de influenciadores via API.
 
     Parâmetros:
-        influencers_nomes (lista): lista com nomes dos influenciadores.
+        influencers_nomes (string): string com nome do influenciador.
         api_key (str): chave da API do RapidAPI.
 
     Retorno:
@@ -99,49 +99,46 @@ def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233m
         "x-rapidapi-host": "instagram-scraper-api2.p.rapidapi.com"
     }
 
-    st.write(influencers_nomes)
-    st.write(type(influencers_nomes))
-    for perfil in influencers_nomes:
-        try:
-            likes_por_post = []
-            comments_por_post = []
+    try:
+        likes_por_post = []
+        comments_por_post = []
 
-            querystring = {"username_or_id_or_url": perfil}
-            response = requests.get(url, headers=headers, params=querystring)
-            results = response.json()
+        querystring = {"username_or_id_or_url": influencers_nomes}
+        response = requests.get(url, headers=headers, params=querystring)
+        results = response.json()
 
-            if "data" not in results or "items" not in results["data"]:
-                st.warning(f"Resposta inválida para o perfil '{perfil}'.")
-                continue
+        if "data" not in results or "items" not in results["data"]:
+            st.warning(f"Resposta inválida para o perfil '{perfil}'.")
+            continue
 
-            n_posts = min(12, len(results["data"]["items"]))
+        n_posts = min(12, len(results["data"]["items"]))
 
-            for i in range(n_posts):
-                item = results["data"]["items"][i]
-                likes_por_post.append(int(item.get("like_count") or 0))
-                comments_por_post.append(int(item.get("comment_count") or 0))
+        for i in range(n_posts):
+            item = results["data"]["items"][i]
+            likes_por_post.append(int(item.get("like_count") or 0))
+            comments_por_post.append(int(item.get("comment_count") or 0))
 
-            if not likes_por_post or not comments_por_post:
-                st.warning(f"Perfil '{perfil}' sem dados de likes ou comentários.")
-                continue
+        if not likes_por_post or not comments_por_post:
+            st.warning(f"Perfil '{influencers_nomes}' sem dados de likes ou comentários.")
+            continue
 
-            media_likes = np.mean(likes_por_post)
-            media_comments = np.mean(comments_por_post)
-            desvpad_likes = np.std(likes_por_post)
-            desvpad_comments = np.std(comments_por_post)
+        media_likes = np.mean(likes_por_post)
+        media_comments = np.mean(comments_por_post)
+        desvpad_likes = np.std(likes_por_post)
+        desvpad_comments = np.std(comments_por_post)
 
-            if media_likes == 0 or media_comments == 0:
-                st.warning(f"Perfil '{perfil}' com média de likes ou comentários zero.")
-                continue
+        if media_likes == 0 or media_comments == 0:
+            st.warning(f"Perfil '{influencers_nomes}' com média de likes ou comentários zero.")
+            continue
 
-            norm_likes = (desvpad_likes / media_likes) * 100
-            norm_comments = (desvpad_comments / media_comments) * 100
-            dispersao_media = round((norm_likes + norm_comments) / 2, 0)
+        norm_likes = (desvpad_likes / media_likes) * 100
+        norm_comments = (desvpad_comments / media_comments) * 100
+        dispersao_media = round((norm_likes + norm_comments) / 2, 0)
 
-            return dispersao_media
+        return dispersao_media
 
-        except Exception as e:
-            st.warning(f"Erro ao processar dados de '{perfil}': {e}")
+    except Exception as e:
+        st.warning(f"Erro ao processar dados de '{perfil}': {e}")
 
 def consolidar_dados_de_perfil():
     """
