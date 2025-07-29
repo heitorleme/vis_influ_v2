@@ -93,23 +93,21 @@ with abas[2]:
         
     influencers_dispersao = {}
 
-    # Conversão segura dos nomes
+    # Extração segura e robusta dos nomes
     raw_nomes = st.session_state.get("influencers_nomes", [])
-	
-    # Normalizar: se vier no formato [{0: "reviewsporsp"}] ou algo assim
-    influencers_nomes = []
-	
-    if isinstance(raw_nomes, list):
-        for item in raw_nomes:
-            if isinstance(item, str):
-                influencers_nomes.append(item)
-            elif isinstance(item, dict):
-                influencers_nomes.extend(str(v) for v in item.values() if isinstance(v, str))
-            else:
-                st.warning("Formato inesperado em influencers_nomes.")
-	
-	# Debug para confirmação após o parse
-    st.write("✅ Influencers extraídos:", influencers_nomes)
+
+# Caso seja pandas.Series ou outro objeto estranho
+    try:
+    # Tenta converter para lista de strings
+        influencers_nomes = list(map(str, list(raw_nomes.values)))  # caso seja Series
+    except AttributeError:
+    # Se não tiver .values, tenta iterar diretamente
+        if isinstance(raw_nomes, list):
+            influencers_nomes = [str(item) for item in raw_nomes if isinstance(item, (str, int, float))]
+        else:
+            influencers_nomes = [str(raw_nomes)]
+
+    st.write("✅ Influencers normalizados:", influencers_nomes)
     st.session_state.perfis_e_dispersoes = influencers_dispersao
         
         # Criar apresentação dos dados
