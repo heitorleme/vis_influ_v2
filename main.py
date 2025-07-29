@@ -95,8 +95,17 @@ with abas[2]:
     
         influencers_dispersao = {}
 
-        influencers_nomes = st.session_state.get("influencers_nomes", [])
-        if isinstance(influencers_nomes, list) and all(isinstance(nome, str) for nome in influencers_nomes):
+        influencers_nomes_raw = st.session_state.get("influencers_nomes", [])
+
+# Garante que será uma lista de strings
+        if isinstance(influencers_nomes_raw, str):
+            influencers_nomes = [influencers_nomes_raw]
+        elif isinstance(influencers_nomes_raw, list):
+            influencers_nomes = [nome for nome in influencers_nomes_raw if isinstance(nome, str)]
+        else:
+            influencers_nomes = []
+
+        if influencers_nomes:
             for nome in influencers_nomes:
                 try:
                     influencers_dispersao[nome] = calcular_dispersao_likes_comentarios(nome)
