@@ -95,6 +95,7 @@ with abas[2]:
 
     # Extração segura e robusta dos nomes
     raw_nomes = st.session_state.get("influencers_nomes", [])
+    st.write(raw_nomes)
 
 # Caso seja pandas.Series ou outro objeto estranho
     try:
