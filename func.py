@@ -119,7 +119,6 @@ def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233m
 
         if not likes_por_post or not comments_por_post:
             st.warning(f"Perfil '{influencers_nomes}' sem dados de likes ou comentários.")
-            continue
 
         media_likes = np.mean(likes_por_post)
         media_comments = np.mean(comments_por_post)
@@ -128,7 +127,6 @@ def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233m
 
         if media_likes == 0 or media_comments == 0:
             st.warning(f"Perfil '{influencers_nomes}' com média de likes ou comentários zero.")
-            continue
 
         norm_likes = (desvpad_likes / media_likes) * 100
         norm_comments = (desvpad_comments / media_comments) * 100
