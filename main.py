@@ -101,12 +101,12 @@ with abas[2]:
 	
     if isinstance(raw_nomes, list):
         for item in raw_nomes:
-        if isinstance(item, str):
-            influencers_nomes.append(item)
-        elif isinstance(item, dict):
-            influencers_nomes.extend(str(v) for v in item.values() if isinstance(v, str))
-        else:
-            st.warning("Formato inesperado em influencers_nomes.")
+            if isinstance(item, str):
+                influencers_nomes.append(item)
+            elif isinstance(item, dict):
+                influencers_nomes.extend(str(v) for v in item.values() if isinstance(v, str))
+            else:
+                st.warning("Formato inesperado em influencers_nomes.")
 	
 	# Debug para confirmação após o parse
     st.write("✅ Influencers extraídos:", influencers_nomes)
