@@ -99,6 +99,8 @@ def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233m
         "x-rapidapi-host": "instagram-scraper-api2.p.rapidapi.com"
     }
 
+    st.write(influencers_nomes)
+    st.write(type(influencers_nomes))
     for perfil in influencers_nomes:
         try:
             likes_por_post = []
