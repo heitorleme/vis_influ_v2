@@ -413,10 +413,6 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         # Planilha estática do Excel
         df_edu = st.session_state.df_educacao_por_cidade.copy()
 
-        # Normalização de strings para o Merge
-        df_unido["Cidade_match"] = df_unido["Cidade"].apply(remover_acentos)
-        df_edu["Cidade_match"] = df_edu["Cidade"].apply(remover_acentos)
-
         # Trata vírgulas nos números do Excel (ex: "11,35" -> 11.35)
         for col in ["female", "male"]:
             if col in df_edu.columns:
@@ -425,25 +421,32 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
                 else:
                     df_edu[col] = df_edu[col].astype(float)
 
+        # Normalização de strings para o Merge
+        df_unido["Cidade_match"] = df_unido["Cidade"].apply(remover_acentos)
+        df_edu["Cidade_match"] = df_edu["Cidade"].apply(remover_acentos)
+
+        # Renomeia antecipadamente para evitar confusão de nomes no Merge
+        df_edu_renomeado = df_edu[["Cidade_match", "Grupo Etário", "female", "male"]].rename(
+            columns={"female": "female_excel", "male": "male_excel"}
+        )
+
         # Merge de Cidades + Grupo Etário
         df_merged = pd.merge(
             df_unido, 
-            df_edu[["Cidade_match", "Grupo Etário", "female", "male"]], 
+            df_edu_renomeado, 
             on=["Cidade_match", "Grupo Etário"], 
-            how="inner",
-            suffixes=('_json', '_excel')
+            how="inner"
         )
 
         if df_merged.empty:
             st.warning("⚠️ Nenhuma cidade coincidiu com a planilha de educação.")
             return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
-        # 2. CÁLCULO CORRETO DA MÉDIA DE ANOS DE ESTUDO (MU)
-        # Anos de estudo da célula = Média dos anos de estudo H/M ponderada pela proporção H/M interna do grupo
+        # 2. CÁLCULO DA MÉDIA DE ANOS DE ESTUDO (MU)
         prop_total_grupo = df_merged["female_json"] + df_merged["male_json"]
         denom_genero = np.where(prop_total_grupo > 0, prop_total_grupo, 1)
 
-        # Média de Anos daquela Faixa Etária/Cidade específica (Resultado ex: 11.2 anos)
+        # Média de Anos daquela célula (ex: ~11.2 anos)
         df_merged["anos_estudo_celula"] = (
             (df_merged["female_json"] * df_merged["female_excel"]) + 
             (df_merged["male_json"] * df_merged["male_excel"])
@@ -452,12 +455,10 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         # Peso final da célula = Peso da Cidade * Proporção da Faixa Etária
         df_merged["peso_celula"] = df_merged["weight"] * prop_total_grupo
 
-        # Média Ponderada Global (Sum(Anos * Peso) / Sum(Peso))
-        grupo = df_merged.groupby("influencer")
+        # Somatório (Anos * Peso) / Somatório (Peso)
         soma_anos_peso = (df_merged["anos_estudo_celula"] * df_merged["peso_celula"]).groupby(df_merged["influencer"]).sum()
         soma_pesos = df_merged["peso_celula"].groupby(df_merged["influencer"]).sum()
 
-        # Média Real do Influenciador (Ex: ~11.8 anos de estudo)
         mu_por_influencer = soma_anos_peso / np.where(soma_pesos > 0, soma_pesos, 1)
 
         # 3. DISTRIBUIÇÃO NORMAL GAUSSIANA (σ = 2.5 anos)
@@ -465,11 +466,6 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         resultados_faixas = []
 
         for inf_nome, mu in mu_por_influencer.items():
-            # Limites de escolaridade (Escala do Brasil em Anos Concluídos)
-            # < 8 anos: Fundamental Completo / Incompleto
-            # 8 a 11 anos: Médio Completo / Incompleto
-            # 11 a 15 anos: Superior Incompleto / Cursando
-            # > 15 anos: Superior Completo
             p_fundamental = norm.cdf(8, loc=mu, scale=sigma)
             p_medio = norm.cdf(11, loc=mu, scale=sigma) - p_fundamental
             p_sup_incompleto = norm.cdf(15, loc=mu, scale=sigma) - (p_fundamental + p_medio)
