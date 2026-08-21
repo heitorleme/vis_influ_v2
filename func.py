@@ -90,9 +90,17 @@ def get_classes_sociais_formatadas(df, nome_influencer):
     return resultado[0] if len(resultado) > 0 else "N/A"
 
 def get_escolaridades_formatadas(df, nome_influencer, default="N/A"):
-    if "influencer" not in df.columns or "educacao_formatada" not in df.columns:
+    if df.empty or "influencer" not in df.columns:
         return default
-    vals = df.loc[df["influencer"].eq(nome_influencer), "educacao_formatada"]
+    
+    # Normaliza buscas (remove espaços e força caixa baixa para bater com o username)
+    nome_alvo = str(nome_influencer).strip().lower()
+    
+    # Procura considerando busca case-insensitive
+    df_temp = df.copy()
+    df_temp["influencer_norm"] = df_temp["influencer"].astype(str).str.strip().str.lower()
+    
+    vals = df_temp.loc[df_temp["influencer_norm"] == nome_alvo, "educacao_formatada"]
     return vals.iloc[0] if not vals.empty else default
 
 def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233msh6b5402b6234f32ep135c63jsn7b9cdd64c9f7"):
