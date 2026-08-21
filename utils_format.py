@@ -71,32 +71,24 @@ def formatar_tabela_classes_sociais(df_result):
         for idx, row in df_result.iterrows()
     ])
 
-def formatar_tabela_distribuicao_educacao(df_resultado):
+def formatar_tabela_distribuicao_educacao(series_resultado):
     """
-    Recebe um DataFrame agrupado por 'influencer' com colunas de escolaridade
-    e converte em uma string formatada por influenciador.
+    Recebe uma Series/DataFrame com a média de anos de estudo e formata o resultado final.
     """
-    if df_resultado.empty:
+    if series_resultado.empty:
         return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
-    df_res = df_resultado.reset_index()
+    df_res = series_resultado.reset_index()
+    df_res.columns = ["influencer", "anos_estudo"]
+
     linhas = []
-
     for _, row in df_res.iterrows():
-        inf_nome = row["influencer"]
+        anos = row["anos_estudo"]
         
-        # Pega todas as colunas de escolaridade (exceto a coluna do influenciador)
-        cols_edu = [c for c in df_res.columns if c != "influencer"]
-        
-        # Cria a string formatada linha por linha
-        texto_formatado = "  \n".join([
-            f"{col}: {row[col] * 100:.2f}%" if row[col] <= 1.0 else f"{col}: {row[col]:.2f}%"
-            for col in cols_edu
-        ])
-
+        # Formata bonitinho em Média de Anos de Estudo
         linhas.append({
-            "influencer": inf_nome,
-            "educacao_formatada": texto_formatado
+            "influencer": row["influencer"],
+            "educacao_formatada": f"Média: {anos:.2f} anos de estudo"
         })
 
     return pd.DataFrame(linhas)
