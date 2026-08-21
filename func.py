@@ -12,12 +12,19 @@ import requests
 import traceback
 from utils_format import exibir_cards_de_posts, formatar_tabela_distribuicao_educacao, exibir_cartao, exibir_cartao_riscos, formatar_tabela_classes_sociais
 
-# Garante a inicialização das chaves no início da execução
-if "influencers_nomes" not in st.session_state:
-    st.session_state.influencers_nomes = []
+# Inicialização centralizada de todas as chaves do session_state
+keys_default = {
+    "influencers_nomes": [],
+    "influencers_dados": {},
+    "df_classes_formatado": pd.DataFrame(),
+    "df_educacao_formatado": pd.DataFrame(),
+    "df_top_interesses_formatado": pd.DataFrame(),
+    "perfis_e_dispersoes": {}
+}
 
-if "influencers_dados" not in st.session_state:
-    st.session_state.influencers_dados = {}
+for key, val in keys_default.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 # Dicionário de tradução dos interesses
 interests_translation = {
