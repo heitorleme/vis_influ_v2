@@ -358,6 +358,9 @@ def calcular_distribuicao_classes_sociais(df_cidades, url_planilha_classes):
         return pd.DataFrame()
     
 import unicodedata
+import pandas as pd
+import numpy as np
+import streamlit as st
 
 def remover_acentos(texto):
     if not isinstance(texto, str):
@@ -368,9 +371,10 @@ def remover_acentos(texto):
     ).lower().strip()
 
 def calcular_distribuicao_educacao(df_cidades, df_dados):
-    df = pd.DataFrame()
+    df_cities = pd.DataFrame()
     df_ages = pd.DataFrame()
 
+    # 1. Extrair cidades e faixas etárias dos JSONs
     for nome, data in df_dados.items():
         try:
             username_real = data.get("user_profile", {}).get("username", nome)
@@ -378,67 +382,73 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
             
             cities_entries = audience_data.get("audience_geo", {}).get("cities", [])
             if cities_entries:
-                df_cities = pd.json_normalize(cities_entries)
-                df_cities["influencer"] = username_real
-                df = pd.concat([df, df_cities], ignore_index=True)
+                df_c = pd.json_normalize(cities_entries)
+                df_c["influencer"] = username_real
+                df_cities = pd.concat([df_cities, df_c], ignore_index=True)
 
             age_entries = audience_data.get("audience_genders_per_age", [])
             if age_entries:
-                df_idades = pd.json_normalize(age_entries)
-                df_idades["influencer"] = username_real
-                df_ages = pd.concat([df_ages, df_idades], ignore_index=True)
+                df_a = pd.json_normalize(age_entries)
+                df_a["influencer"] = username_real
+                df_ages = pd.concat([df_ages, df_a], ignore_index=True)
 
         except Exception as e:
             st.warning(f"Erro ao extrair dados de {nome}: {e}")
 
-    if df.empty or df_ages.empty:
+    if df_cities.empty or df_ages.empty:
         return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
     try:
-        df_ages["male"] = pd.to_numeric(df_ages["male"], errors="coerce").fillna(0)
-        df_ages["female"] = pd.to_numeric(df_ages["female"], errors="coerce").fillna(0)
-        df_ages["total_grupo"] = df_ages["male"] + df_ages["female"]
+        # Converter para numérico decimal do JSON
+        df_ages["female_json"] = pd.to_numeric(df_ages["female"], errors="coerce").fillna(0)
+        df_ages["male_json"] = pd.to_numeric(df_ages["male"], errors="coerce").fillna(0)
 
-        df["Cidade"] = df["name"]
+        df_cities["Cidade"] = df_cities["name"]
         
-        df_unido = pd.merge(df, df_ages, on="influencer")
+        # Junta cidade x idades do influenciador
+        df_unido = pd.merge(df_cities, df_ages, on="influencer")
         df_unido.rename(columns={"code": "Grupo Etário"}, errors="ignore", inplace=True)
 
-        # Planilha estática
+        # 2. Carrega a planilha estática do Excel
         df_edu = st.session_state.df_educacao_por_cidade.copy()
 
-        # Normalização para ignorar acentos e letras maiúsculas/minúsculas no Merge
+        # Normaliza nomes de cidades para evitar erros de acentuação
         df_unido["Cidade_match"] = df_unido["Cidade"].apply(remover_acentos)
         df_edu["Cidade_match"] = df_edu["Cidade"].apply(remover_acentos)
 
-        df_merged = pd.merge(df_unido, df_edu, on=["Cidade_match", "Grupo Etário"], how="inner", suffixes=('', '_excel'))
+        # Trata vírgula decimal do Excel (ex: "11,35" -> 11.35)
+        for col in ["female", "male"]:
+            if col in df_edu.columns:
+                if df_edu[col].dtype == 'object':
+                    df_edu[col] = df_edu[col].astype(str).str.replace(',', '.').astype(float)
+                else:
+                    df_edu[col] = df_edu[col].astype(float)
+
+        # Merge de Cidades + Grupo Etário
+        df_merged = pd.merge(
+            df_unido, 
+            df_edu[["Cidade_match", "Grupo Etário", "female", "male"]], 
+            on=["Cidade_match", "Grupo Etário"], 
+            how="inner",
+            suffixes=('', '_excel')
+        )
 
         if df_merged.empty:
-            # Fallback caso a coluna Grupo Etário divirja na planilha: tenta o merge apenas por Cidade
-            df_merged = pd.merge(df_unido, df_edu, on="Cidade_match", how="inner", suffixes=('', '_excel'))
-
-        if df_merged.empty:
-            st.warning("⚠️ Nenhuma cidade do JSON coincidiu com a planilha 'educacao_por_cidade.xlsx'.")
+            st.warning("⚠️ Nenhuma cidade bateu com a planilha de educação.")
             return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
-        # Ponderação dos pesos
-        df_merged["peso_combinado"] = df_merged["weight"] * df_merged["total_grupo"]
-        soma_pesos = df_merged.groupby("influencer")["peso_combinado"].transform("sum")
-        df_merged["peso_normalizado"] = np.where(soma_pesos > 0, df_merged["peso_combinado"] / soma_pesos, 0)
+        # 3. Ponderação da Audiência por Cidade
+        total_weight_influencer = df_merged.groupby("influencer")["weight"].transform("sum")
+        df_merged["weight_norm"] = np.where(total_weight_influencer > 0, df_merged["weight"] / total_weight_influencer, 0)
 
-        # Colunas de escolaridade
-        colunas_excluir = ["Cidade", "Grupo Etário", "influencer", "name", "code", "weight", 
-                           "male", "female", "total_grupo", "peso_combinado", "peso_normalizado", "Cidade_match"]
-        colunas_escolaridade = [c for c in df_edu.columns if c not in colunas_excluir]
+        # 4. Anos de estudo ponderados (Proporção do gênero na audiência * Anos de estudo no Excel * Peso da cidade)
+        df_merged["anos_female"] = df_merged["female_json"] * df_merged["female"] * df_merged["weight_norm"]
+        df_merged["anos_male"] = df_merged["male_json"] * df_merged["male"] * df_merged["weight_norm"]
 
-        for col in colunas_escolaridade:
-            df_merged[f"norm_{col}"] = df_merged[col] * df_merged["peso_normalizado"]
+        # Soma total dos anos ponderados por influenciador
+        resultado_anos = df_merged.groupby("influencer")[["anos_female", "anos_male"]].sum().sum(axis=1)
 
-        cols_norm = [f"norm_{col}" for col in colunas_escolaridade]
-        resultado = df_merged.groupby("influencer")[cols_norm].sum()
-        resultado.columns = colunas_escolaridade
-
-        return formatar_tabela_distribuicao_educacao(resultado)
+        return formatar_tabela_distribuicao_educacao(resultado_anos)
 
     except Exception as e:
         st.error(f"Erro no cálculo de escolaridade: {e}")
