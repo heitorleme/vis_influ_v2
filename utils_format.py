@@ -71,34 +71,36 @@ def formatar_tabela_classes_sociais(df_result):
         for idx, row in df_result.iterrows()
     ])
 
-def formatar_tabela_distribuicao_educacao(total_anos_por_influencer, std_dev=3):
+def formatar_tabela_distribuicao_educacao(df_resultado):
     """
-    Recebe uma Series com a soma total de anos de escolaridade (feminino + masculino) por influencer,
-    e retorna uma tabela formatada com faixas educacionais estimadas com base em uma distribuição normal.
+    Recebe um DataFrame agrupado por 'influencer' com colunas de escolaridade
+    e converte em uma string formatada por influenciador.
     """
-    linhas = []
-    for influencer, mean in total_anos_por_influencer.items():
-        p1 = norm.cdf(5, mean, std_dev) * 100
-        p2 = (norm.cdf(9, mean, std_dev) - norm.cdf(5, mean, std_dev)) * 100
-        p3 = (norm.cdf(12, mean, std_dev) - norm.cdf(9, mean, std_dev)) * 100
-        p4 = 100 - (p1 + p2 + p3)  # garante fechar 100%
-        linhas.append({
-            "influencer": influencer,
-            "< 5 anos (%)": p1,
-            "5–9 anos (%)": p2,
-            "9–12 anos (%)": p3,
-            "12+ anos (%)": p4
-        })
-        
-    df = pd.DataFrame(linhas)
-    df["educacao_formatada"] = (
-        df["< 5 anos (%)"].map("{:.2f}%".format) + "  \n" +
-        df["5–9 anos (%)"].map("{:.2f}%".format) + "  \n" +
-        df["9–12 anos (%)"].map("{:.2f}%".format) + "  \n" +
-        df["12+ anos (%)"].map("{:.2f}%".format)
-    )
-    return df[["influencer", "educacao_formatada"]]
+    if df_resultado.empty:
+        return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
+    df_res = df_resultado.reset_index()
+    linhas = []
+
+    for _, row in df_res.iterrows():
+        inf_nome = row["influencer"]
+        
+        # Pega todas as colunas de escolaridade (exceto a coluna do influenciador)
+        cols_edu = [c for c in df_res.columns if c != "influencer"]
+        
+        # Cria a string formatada linha por linha
+        texto_formatado = "  \n".join([
+            f"{col}: {row[col] * 100:.2f}%" if row[col] <= 1.0 else f"{col}: {row[col]:.2f}%"
+            for col in cols_edu
+        ])
+
+        linhas.append({
+            "influencer": inf_nome,
+            "educacao_formatada": texto_formatado
+        })
+
+    return pd.DataFrame(linhas)
+    
 def exibir_cards_de_posts(lista_posts):
     """
     Exibe uma lista de posts em layout de 3 colunas com imagem, texto e métricas.
