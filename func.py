@@ -400,20 +400,20 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
     try:
-        # Garante conversão numérica das proporções do JSON
+        # Conversão numérica das proporções do JSON
         df_ages["female_json"] = pd.to_numeric(df_ages["female"], errors="coerce").fillna(0)
         df_ages["male_json"] = pd.to_numeric(df_ages["male"], errors="coerce").fillna(0)
 
         df_cities["Cidade"] = df_cities["name"]
         
-        # Merge Cidade x Demografia
+        # Merge Cidade x Idades
         df_unido = pd.merge(df_cities, df_ages, on="influencer")
         df_unido.rename(columns={"code": "Grupo Etário"}, errors="ignore", inplace=True)
 
         # Planilha estática do Excel
         df_edu = st.session_state.df_educacao_por_cidade.copy()
 
-        # Normaliza cidades para o merge
+        # Normalização para o Merge
         df_unido["Cidade_match"] = df_unido["Cidade"].apply(remover_acentos)
         df_edu["Cidade_match"] = df_edu["Cidade"].apply(remover_acentos)
 
@@ -425,7 +425,7 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
                 else:
                     df_edu[col] = df_edu[col].astype(float)
 
-        # Merge das tabelas
+        # Merge de Cidades + Grupo Etário com o Excel
         df_merged = pd.merge(
             df_unido, 
             df_edu[["Cidade_match", "Grupo Etário", "female", "male"]], 
@@ -438,53 +438,45 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
             st.warning("⚠️ Nenhuma cidade coincidiu com a planilha de educação.")
             return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
-        # 2. Ponderação Correta do Peso das Cidades
-        # Proporção demográfica combinada da célula (Homens + Mulheres na faixa etária)
-        df_merged["prop_celula"] = df_merged["female_json"] + df_merged["male_json"]
+        # 2. CÁLCULO ESTATÍSTICO DA MÉDIA PONDERADA (Mu)
+        # O peso de cada combinação (Cidade + Faixa Etária + Gênero) na audiência total
+        df_merged["peso_female"] = df_merged["weight"] * df_merged["female_json"]
+        df_merged["peso_male"] = df_merged["weight"] * df_merged["male_json"]
+
+        # Anos acumulados por célula
+        df_merged["anos_acumulados_female"] = df_merged["peso_female"] * df_merged["female"]
+        df_merged["anos_acumulados_male"] = df_merged["peso_male"] * df_merged["male"]
+
+        # Agrupamento por influenciador para obter Médias Ponderadas Reais
+        grupo = df_merged.groupby("influencer")
         
-        # Peso ponderado da célula = Peso da Cidade * Proporção Demográfica
-        df_merged["peso_celula"] = df_merged["weight"] * df_merged["prop_celula"]
-        
-        # Normaliza a soma dos pesos por influenciador para dar exatamente 1.0 (100%)
-        soma_pesos = df_merged.groupby("influencer")["peso_celula"].transform("sum")
-        df_merged["peso_normalizado"] = np.where(soma_pesos > 0, df_merged["peso_celula"] / soma_pesos, 0)
+        soma_anos_total = grupo["anos_acumulados_female"].sum() + grupo["anos_acumulados_male"].sum()
+        soma_pesos_total = grupo["peso_female"].sum() + grupo["peso_male"].sum()
 
-        # 3. Média de Anos de Estudo da célula
-        # Média simples entre male/female do Excel ponderada pela divisão interna de gênero no JSON
-        denom_genero = np.where(df_merged["prop_celula"] > 0, df_merged["prop_celula"], 1)
-        df_merged["anos_estudo_celula"] = (
-            (df_merged["female_json"] * df_merged["female"]) + 
-            (df_merged["male_json"] * df_merged["male"])
-        ) / denom_genero
+        # Média ponderada real de anos de estudo (\mu) por influenciador
+        mu_por_influencer = soma_anos_total / np.where(soma_pesos_total > 0, soma_pesos_total, 1)
 
-        # 4. Média Geral Ponderada (Mu) por Influenciador
-        df_merged["mu_parcela"] = df_merged["anos_estudo_celula"] * df_merged["peso_normalizado"]
-        mu_por_influencer = df_merged.groupby("influencer")["mu_parcela"].sum()
-
-        # 5. Cálculo das Faixas de Escolaridade usando Distribuição Normal (σ = 3.0 anos)
-        sigma = 3.0
+        # 3. DISTRIBUIÇÃO NORMAL GAUASSIANA (σ = 2.5 anos)
+        # Limites em anos de estudo do sistema educacional brasileiro
+        sigma = 2.5
         resultados_faixas = []
 
         for inf_nome, mu in mu_por_influencer.items():
-            # Limites acumulados em anos de estudo (Escala Brasil/IBGE)
-            # Ensino Fundamental Incompleto/Completo (< 9 anos)
-            p_fundamental = norm.cdf(9, loc=mu, scale=sigma)
-            
-            # Ensino Médio Incompleto/Completo (9 a 12 anos)
-            p_medio = norm.cdf(12, loc=mu, scale=sigma) - p_fundamental
-            
-            # Ensino Superior Incompleto (12 a 14 anos)
-            p_sup_incompleto = norm.cdf(14, loc=mu, scale=sigma) - (p_fundamental + p_medio)
-            
-            # Ensino Superior Completo / Pós (> 14 anos)
-            p_sup_completo = 1.0 - norm.cdf(14, loc=mu, scale=sigma)
+            # cdf(8)  -> Fundamental Completo / Incompleto (até 8 anos)
+            # cdf(11) -> Médio Completo / Incompleto (8 a 11 anos)
+            # cdf(15) -> Superior Incompleto / Cursando (11 a 15 anos)
+            # > 15    -> Superior Completo / Pós-Graduação (> 15 anos)
+            p_fundamental = norm.cdf(8, loc=mu, scale=sigma)
+            p_medio = norm.cdf(11, loc=mu, scale=sigma) - p_fundamental
+            p_sup_incompleto = norm.cdf(15, loc=mu, scale=sigma) - (p_fundamental + p_medio)
+            p_sup_completo = 1.0 - norm.cdf(15, loc=mu, scale=sigma)
 
             resultados_faixas.append({
                 "influencer": inf_nome,
-                "Ensino Fundamental": max(0, p_fundamental),
-                "Ensino Médio": max(0, p_medio),
-                "Superior Incompleto": max(0, p_sup_incompleto),
-                "Superior Completo": max(0, p_sup_completo)
+                "Ensino Fundamental": max(0.0, p_fundamental),
+                "Ensino Médio": max(0.0, p_medio),
+                "Superior Incompleto": max(0.0, p_sup_incompleto),
+                "Superior Completo": max(0.0, p_sup_completo)
             })
 
         df_distribuicao = pd.DataFrame(resultados_faixas).set_index("influencer")
@@ -493,7 +485,7 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
     except Exception as e:
         st.error(f"Erro no cálculo de escolaridade: {e}")
         return pd.DataFrame(columns=["influencer", "educacao_formatada"])
-	
+		
 def extrair_top_interesses_formatados(dados_influencers: dict, interests_translation: dict) -> pd.DataFrame:
     """
     Extrai e formata os 5 principais interesses de cada influenciador.
