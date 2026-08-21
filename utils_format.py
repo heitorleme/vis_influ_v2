@@ -71,24 +71,28 @@ def formatar_tabela_classes_sociais(df_result):
         for idx, row in df_result.iterrows()
     ])
 
-def formatar_tabela_distribuicao_educacao(series_resultado):
+def formatar_tabela_distribuicao_educacao(df_distribuicao):
     """
-    Recebe uma Series/DataFrame com a média de anos de estudo e formata o resultado final.
+    Formata o DataFrame contendo os percentuais das faixas de escolaridade.
     """
-    if series_resultado.empty:
+    if df_distribuicao.empty:
         return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
-    df_res = series_resultado.reset_index()
-    df_res.columns = ["influencer", "anos_estudo"]
-
+    df_res = df_distribuicao.reset_index()
     linhas = []
+
     for _, row in df_res.iterrows():
-        anos = row["anos_estudo"]
+        inf_nome = row["influencer"]
+        cols_faixas = [c for c in df_res.columns if c != "influencer"]
         
-        # Formata bonitinho em Média de Anos de Estudo
+        texto_faixas = [
+            f"{col}: {row[col] * 100:.2f}%"
+            for col in cols_faixas
+        ]
+
         linhas.append({
-            "influencer": row["influencer"],
-            "educacao_formatada": f"Média: {anos:.2f} anos de estudo"
+            "influencer": inf_nome,
+            "educacao_formatada": "  \n".join(texto_faixas)
         })
 
     return pd.DataFrame(linhas)
