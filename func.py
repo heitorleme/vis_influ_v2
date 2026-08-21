@@ -413,7 +413,7 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         # Planilha estática do Excel
         df_edu = st.session_state.df_educacao_por_cidade.copy()
 
-        # Normalização para o Merge
+        # Normalização de strings para o Merge
         df_unido["Cidade_match"] = df_unido["Cidade"].apply(remover_acentos)
         df_edu["Cidade_match"] = df_edu["Cidade"].apply(remover_acentos)
 
@@ -425,47 +425,51 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
                 else:
                     df_edu[col] = df_edu[col].astype(float)
 
-        # Merge de Cidades + Grupo Etário com o Excel
+        # Merge de Cidades + Grupo Etário
         df_merged = pd.merge(
             df_unido, 
             df_edu[["Cidade_match", "Grupo Etário", "female", "male"]], 
             on=["Cidade_match", "Grupo Etário"], 
             how="inner",
-            suffixes=('', '_excel')
+            suffixes=('_json', '_excel')
         )
 
         if df_merged.empty:
             st.warning("⚠️ Nenhuma cidade coincidiu com a planilha de educação.")
             return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
-        # 2. CÁLCULO ESTATÍSTICO DA MÉDIA PONDERADA (Mu)
-        # O peso de cada combinação (Cidade + Faixa Etária + Gênero) na audiência total
-        df_merged["peso_female"] = df_merged["weight"] * df_merged["female_json"]
-        df_merged["peso_male"] = df_merged["weight"] * df_merged["male_json"]
+        # 2. CÁLCULO CORRETO DA MÉDIA DE ANOS DE ESTUDO (MU)
+        # Anos de estudo da célula = Média dos anos de estudo H/M ponderada pela proporção H/M interna do grupo
+        prop_total_grupo = df_merged["female_json"] + df_merged["male_json"]
+        denom_genero = np.where(prop_total_grupo > 0, prop_total_grupo, 1)
 
-        # Anos acumulados por célula
-        df_merged["anos_acumulados_female"] = df_merged["peso_female"] * df_merged["female"]
-        df_merged["anos_acumulados_male"] = df_merged["peso_male"] * df_merged["male"]
+        # Média de Anos daquela Faixa Etária/Cidade específica (Resultado ex: 11.2 anos)
+        df_merged["anos_estudo_celula"] = (
+            (df_merged["female_json"] * df_merged["female_excel"]) + 
+            (df_merged["male_json"] * df_merged["male_excel"])
+        ) / denom_genero
 
-        # Agrupamento por influenciador para obter Médias Ponderadas Reais
+        # Peso final da célula = Peso da Cidade * Proporção da Faixa Etária
+        df_merged["peso_celula"] = df_merged["weight"] * prop_total_grupo
+
+        # Média Ponderada Global (Sum(Anos * Peso) / Sum(Peso))
         grupo = df_merged.groupby("influencer")
-        
-        soma_anos_total = grupo["anos_acumulados_female"].sum() + grupo["anos_acumulados_male"].sum()
-        soma_pesos_total = grupo["peso_female"].sum() + grupo["peso_male"].sum()
+        soma_anos_peso = (df_merged["anos_estudo_celula"] * df_merged["peso_celula"]).groupby(df_merged["influencer"]).sum()
+        soma_pesos = df_merged["peso_celula"].groupby(df_merged["influencer"]).sum()
 
-        # Média ponderada real de anos de estudo (\mu) por influenciador
-        mu_por_influencer = soma_anos_total / np.where(soma_pesos_total > 0, soma_pesos_total, 1)
+        # Média Real do Influenciador (Ex: ~11.8 anos de estudo)
+        mu_por_influencer = soma_anos_peso / np.where(soma_pesos > 0, soma_pesos, 1)
 
-        # 3. DISTRIBUIÇÃO NORMAL GAUASSIANA (σ = 2.5 anos)
-        # Limites em anos de estudo do sistema educacional brasileiro
+        # 3. DISTRIBUIÇÃO NORMAL GAUSSIANA (σ = 2.5 anos)
         sigma = 2.5
         resultados_faixas = []
 
         for inf_nome, mu in mu_por_influencer.items():
-            # cdf(8)  -> Fundamental Completo / Incompleto (até 8 anos)
-            # cdf(11) -> Médio Completo / Incompleto (8 a 11 anos)
-            # cdf(15) -> Superior Incompleto / Cursando (11 a 15 anos)
-            # > 15    -> Superior Completo / Pós-Graduação (> 15 anos)
+            # Limites de escolaridade (Escala do Brasil em Anos Concluídos)
+            # < 8 anos: Fundamental Completo / Incompleto
+            # 8 a 11 anos: Médio Completo / Incompleto
+            # 11 a 15 anos: Superior Incompleto / Cursando
+            # > 15 anos: Superior Completo
             p_fundamental = norm.cdf(8, loc=mu, scale=sigma)
             p_medio = norm.cdf(11, loc=mu, scale=sigma) - p_fundamental
             p_sup_incompleto = norm.cdf(15, loc=mu, scale=sigma) - (p_fundamental + p_medio)
