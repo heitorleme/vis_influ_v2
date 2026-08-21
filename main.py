@@ -19,15 +19,20 @@ try:
 except:
     pass
 
-# Inicialização centralizada de todas as chaves do session_state
-keys_default = {
+# Bloco de inicialização único no início do main.py
+ESTADOS_INICIAIS = {
     "influencers_nomes": [],
     "influencers_dados": {},
+    "perfis_e_dispersoes": {},
     "df_classes_formatado": pd.DataFrame(),
     "df_educacao_formatado": pd.DataFrame(),
-    "df_top_interesses_formatado": pd.DataFrame(),
-    "perfis_e_dispersoes": {}
+    "df_top_interesses": pd.DataFrame(),           # <- Adicionado
+    "df_top_interesses_formatado": pd.DataFrame()  # <- Adicionado por precaução
 }
+
+for chave, valor_padrao in ESTADOS_INICIAIS.items():
+    if chave not in st.session_state:
+        st.session_state[chave] = valor_padrao
 
 for key, val in keys_default.items():
     if key not in st.session_state:
@@ -252,7 +257,7 @@ with abas[1]:
     perfis_e_dispersoes=st.session_state.perfis_e_dispersoes,
     df_classes_formatado=st.session_state.df_classes_formatado,
     df_educacao_formatado=st.session_state.df_educacao_formatado,
-    df_top_interesses_formatado=st.session_state.df_top_interesses,
+    df_top_interesses_formatado=st.session_state.get("df_top_interesses", pd.DataFrame()),,
     format_milhar=format_milhar,
     get_classes_sociais_formatadas=get_classes_sociais_formatadas,
     get_escolaridades_formatadas=get_escolaridades_formatadas
