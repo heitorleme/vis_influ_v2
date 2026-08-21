@@ -361,6 +361,7 @@ import unicodedata
 import pandas as pd
 import numpy as np
 import streamlit as st
+from scipy.stats import norm
 
 def remover_acentos(texto):
     if not isinstance(texto, str):
@@ -399,24 +400,24 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
     try:
-        # Converter para numérico decimal do JSON
+        # Garante conversão numérica das proporções do JSON
         df_ages["female_json"] = pd.to_numeric(df_ages["female"], errors="coerce").fillna(0)
         df_ages["male_json"] = pd.to_numeric(df_ages["male"], errors="coerce").fillna(0)
 
         df_cities["Cidade"] = df_cities["name"]
         
-        # Junta cidade x idades do influenciador
+        # Merge Cidade x Demografia
         df_unido = pd.merge(df_cities, df_ages, on="influencer")
         df_unido.rename(columns={"code": "Grupo Etário"}, errors="ignore", inplace=True)
 
-        # 2. Carrega a planilha estática do Excel
+        # Planilha estática do Excel
         df_edu = st.session_state.df_educacao_por_cidade.copy()
 
-        # Normaliza nomes de cidades para evitar erros de acentuação
+        # Normaliza cidades para o merge
         df_unido["Cidade_match"] = df_unido["Cidade"].apply(remover_acentos)
         df_edu["Cidade_match"] = df_edu["Cidade"].apply(remover_acentos)
 
-        # Trata vírgula decimal do Excel (ex: "11,35" -> 11.35)
+        # Trata vírgulas nos números do Excel (ex: "11,35" -> 11.35)
         for col in ["female", "male"]:
             if col in df_edu.columns:
                 if df_edu[col].dtype == 'object':
@@ -424,7 +425,7 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
                 else:
                     df_edu[col] = df_edu[col].astype(float)
 
-        # Merge de Cidades + Grupo Etário
+        # Merge das tabelas
         df_merged = pd.merge(
             df_unido, 
             df_edu[["Cidade_match", "Grupo Etário", "female", "male"]], 
@@ -434,26 +435,65 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
         )
 
         if df_merged.empty:
-            st.warning("⚠️ Nenhuma cidade bateu com a planilha de educação.")
+            st.warning("⚠️ Nenhuma cidade coincidiu com a planilha de educação.")
             return pd.DataFrame(columns=["influencer", "educacao_formatada"])
 
-        # 3. Ponderação da Audiência por Cidade
-        total_weight_influencer = df_merged.groupby("influencer")["weight"].transform("sum")
-        df_merged["weight_norm"] = np.where(total_weight_influencer > 0, df_merged["weight"] / total_weight_influencer, 0)
+        # 2. Ponderação Correta do Peso das Cidades
+        # Proporção demográfica combinada da célula (Homens + Mulheres na faixa etária)
+        df_merged["prop_celula"] = df_merged["female_json"] + df_merged["male_json"]
+        
+        # Peso ponderado da célula = Peso da Cidade * Proporção Demográfica
+        df_merged["peso_celula"] = df_merged["weight"] * df_merged["prop_celula"]
+        
+        # Normaliza a soma dos pesos por influenciador para dar exatamente 1.0 (100%)
+        soma_pesos = df_merged.groupby("influencer")["peso_celula"].transform("sum")
+        df_merged["peso_normalizado"] = np.where(soma_pesos > 0, df_merged["peso_celula"] / soma_pesos, 0)
 
-        # 4. Anos de estudo ponderados (Proporção do gênero na audiência * Anos de estudo no Excel * Peso da cidade)
-        df_merged["anos_female"] = df_merged["female_json"] * df_merged["female"] * df_merged["weight_norm"]
-        df_merged["anos_male"] = df_merged["male_json"] * df_merged["male"] * df_merged["weight_norm"]
+        # 3. Média de Anos de Estudo da célula
+        # Média simples entre male/female do Excel ponderada pela divisão interna de gênero no JSON
+        denom_genero = np.where(df_merged["prop_celula"] > 0, df_merged["prop_celula"], 1)
+        df_merged["anos_estudo_celula"] = (
+            (df_merged["female_json"] * df_merged["female"]) + 
+            (df_merged["male_json"] * df_merged["male"])
+        ) / denom_genero
 
-        # Soma total dos anos ponderados por influenciador
-        resultado_anos = df_merged.groupby("influencer")[["anos_female", "anos_male"]].sum().sum(axis=1)
+        # 4. Média Geral Ponderada (Mu) por Influenciador
+        df_merged["mu_parcela"] = df_merged["anos_estudo_celula"] * df_merged["peso_normalizado"]
+        mu_por_influencer = df_merged.groupby("influencer")["mu_parcela"].sum()
 
-        return formatar_tabela_distribuicao_educacao(resultado_anos)
+        # 5. Cálculo das Faixas de Escolaridade usando Distribuição Normal (σ = 3.0 anos)
+        sigma = 3.0
+        resultados_faixas = []
+
+        for inf_nome, mu in mu_por_influencer.items():
+            # Limites acumulados em anos de estudo (Escala Brasil/IBGE)
+            # Ensino Fundamental Incompleto/Completo (< 9 anos)
+            p_fundamental = norm.cdf(9, loc=mu, scale=sigma)
+            
+            # Ensino Médio Incompleto/Completo (9 a 12 anos)
+            p_medio = norm.cdf(12, loc=mu, scale=sigma) - p_fundamental
+            
+            # Ensino Superior Incompleto (12 a 14 anos)
+            p_sup_incompleto = norm.cdf(14, loc=mu, scale=sigma) - (p_fundamental + p_medio)
+            
+            # Ensino Superior Completo / Pós (> 14 anos)
+            p_sup_completo = 1.0 - norm.cdf(14, loc=mu, scale=sigma)
+
+            resultados_faixas.append({
+                "influencer": inf_nome,
+                "Ensino Fundamental": max(0, p_fundamental),
+                "Ensino Médio": max(0, p_medio),
+                "Superior Incompleto": max(0, p_sup_incompleto),
+                "Superior Completo": max(0, p_sup_completo)
+            })
+
+        df_distribuicao = pd.DataFrame(resultados_faixas).set_index("influencer")
+        return formatar_tabela_distribuicao_educacao(df_distribuicao)
 
     except Exception as e:
         st.error(f"Erro no cálculo de escolaridade: {e}")
         return pd.DataFrame(columns=["influencer", "educacao_formatada"])
-		
+	
 def extrair_top_interesses_formatados(dados_influencers: dict, interests_translation: dict) -> pd.DataFrame:
     """
     Extrai e formata os 5 principais interesses de cada influenciador.
