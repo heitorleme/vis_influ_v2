@@ -19,6 +19,20 @@ try:
 except:
     pass
 
+# Inicialização centralizada de todas as chaves do session_state
+keys_default = {
+    "influencers_nomes": [],
+    "influencers_dados": {},
+    "df_classes_formatado": pd.DataFrame(),
+    "df_educacao_formatado": pd.DataFrame(),
+    "df_top_interesses_formatado": pd.DataFrame(),
+    "perfis_e_dispersoes": {}
+}
+
+for key, val in keys_default.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
+
 # Inicialização no session_state
 carregar_planilhas_estaticas()
 
