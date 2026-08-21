@@ -358,12 +358,15 @@ def calcular_distribuicao_classes_sociais(df_cidades, url_planilha_classes):
         return pd.DataFrame()
     
 def calcular_distribuicao_educacao(df_cidades, df_dados):
+    """
+    Calcula a distribuição educacional estimada ponderada por cidade e faixa etária.
+    """
     df = pd.DataFrame()
     df_ages = pd.DataFrame()
 
+    # 1. Extrair cidades e faixas etárias dos JSONs
     for nome, data in df_dados.items():
         try:
-            # Pega o username do perfil para padronizar com a tabela consolidada
             username_real = data.get("user_profile", {}).get("username", nome)
             audience_data = data.get("audience_followers", {}).get("data", {})
             
@@ -380,56 +383,58 @@ def calcular_distribuicao_educacao(df_cidades, df_dados):
                 df_ages = pd.concat([df_ages, df_idades], ignore_index=True)
 
         except Exception as e:
-            st.warning(f"Erro ao processar dados educacionais de {nome}: {e}")
+            st.warning(f"Erro ao extrair dados de {nome}: {e}")
 
     if df.empty or df_ages.empty:
         return pd.DataFrame()
 
     try:
+        # Converter para valores numéricos
         df_ages["male"] = pd.to_numeric(df_ages["male"], errors="coerce").fillna(0)
         df_ages["female"] = pd.to_numeric(df_ages["female"], errors="coerce").fillna(0)
+        df_ages["total_grupo"] = df_ages["male"] + df_ages["female"]
 
         df["Cidade"] = df["name"]
-        df_unido = pd.merge(df, df_ages, on="influencer")
-
-        total_weight_por_influencer = df_unido.groupby("influencer")["weight"].transform("sum")
-        total_weight_por_cidade = df_unido.groupby(["influencer", "Cidade"])["weight"].transform("sum")
         
-        df_unido["weight_normalized"] = np.where(
-            total_weight_por_influencer > 0, 
-            total_weight_por_cidade / total_weight_por_influencer, 
-            0
-        )
-
-        df_unido["female_weighted"] = df_unido["female"] * df_unido["weight_normalized"]
-        df_unido["male_weighted"] = df_unido["male"] * df_unido["weight_normalized"]
-
+        # Junta cidade x idades do influenciador
+        df_unido = pd.merge(df, df_ages, on="influencer")
         df_unido.rename(columns={"code": "Grupo Etário"}, errors="ignore", inplace=True)
 
+        # 2. Realizar Merge com a planilha estática de escolaridade
         df_edu = st.session_state.df_educacao_por_cidade
+        df_merged = pd.merge(df_unido, df_edu, on=["Cidade", "Grupo Etário"], how="inner")
 
-        # Tenta merge das cidades (normalizando acentos/caixa)
-        df_unido_edu = df_unido.merge(df_edu, on=["Cidade", "Grupo Etário"], how="inner")
-
-        if df_unido_edu.empty:
-            st.warning("Nenhuma cidade do JSON coincidiu com a planilha 'educacao_por_cidade.xlsx'.")
+        if df_merged.empty:
+            st.warning("Nenhuma cidade bateu com a planilha 'educacao_por_cidade.xlsx'.")
             return pd.DataFrame()
 
-        # Multiplicação pelas colunas educacionais da planilha
-        colunas_anos = [c for c in df_edu.columns if c not in ["Cidade", "Grupo Etário"]]
-        col_edu = colunas_anos[0] if colunas_anos else df_edu.columns[-1]
+        # 3. Ponderar o peso das cidades VÁLIDAS que bateram no Merge
+        # Multiplica o peso da cidade pela proporção da faixa etária
+        df_merged["peso_combinado"] = df_merged["weight"] * df_merged["total_grupo"]
 
-        df_unido_edu["anos_female"] = df_unido_edu["female_weighted"] * df_unido_edu[col_edu]
-        df_unido_edu["anos_male"] = df_unido_edu["male_weighted"] * df_unido_edu[col_edu]
+        # Re-normaliza a soma dos pesos combinados para 1.0 por influenciador
+        soma_pesos = df_merged.groupby("influencer")["peso_combinado"].transform("sum")
+        df_merged["peso_normalizado"] = np.where(soma_pesos > 0, df_merged["peso_combinado"] / soma_pesos, 0)
 
-        result_edu = df_unido_edu.groupby("influencer")[["anos_female", "anos_male"]].sum().sum(axis=1)
+        # 4. Calcular a distribuição ponderada das colunas educacionais
+        # Identifica as colunas de escolaridade (ex: Fundamental, Médio, Superior)
+        colunas_reservadas = ["Cidade", "Grupo Etário", "influencer", "name", "code", "weight", "male", "female", "total_grupo", "peso_combinado", "peso_normalizado"]
+        colunas_escolaridade = [c for c in df_edu.columns if c not in ["Cidade", "Grupo Etário"]]
 
-        # Retorna o DataFrame formatado contendo as colunas [influencer, educacao_formatada]
-        return formatar_tabela_distribuicao_educacao(result_edu)
+        # Aplica a ponderação sobre cada nível educacional
+        for col in colunas_escolaridade:
+            df_merged[f"norm_{col}"] = df_merged[col] * df_merged["peso_normalizado"]
 
-    except Exception as e:
-        st.error(f"Erro ao calcular escolaridade: {e}")
-        return pd.DataFrame()
+        # Agrupa pelo influenciador e soma os percentuais ponderados
+        cols_norm = [f"norm_{col}" for col in colunas_escolaridade]
+        resultado = df_merged.groupby("influencer")[cols_norm].sum()
+
+        # Renomeia as colunas de volta para os nomes originais da planilha
+        resultado.columns = colunas_escolaridade
+
+        # Passa a matriz agregada final para formatação
+        return formatar_tabela_distribuicao_educacao(resultado)
+
     except Exception as e:
         st.error(f"Erro ao calcular distribuição educacional: {e}")
         return pd.DataFrame()
