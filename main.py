@@ -34,10 +34,6 @@ for chave, valor_padrao in ESTADOS_INICIAIS.items():
     if chave not in st.session_state:
         st.session_state[chave] = valor_padrao
 
-for key, val in keys_default.items():
-    if key not in st.session_state:
-        st.session_state[key] = val
-
 # Inicialização no session_state
 carregar_planilhas_estaticas()
 
