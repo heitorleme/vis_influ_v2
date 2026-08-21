@@ -12,6 +12,13 @@ import requests
 import traceback
 from utils_format import exibir_cards_de_posts, formatar_tabela_distribuicao_educacao, exibir_cartao, exibir_cartao_riscos, formatar_tabela_classes_sociais
 
+# Garante a inicialização das chaves no início da execução
+if "influencers_nomes" not in st.session_state:
+    st.session_state.influencers_nomes = []
+
+if "influencers_dados" not in st.session_state:
+    st.session_state.influencers_dados = {}
+
 # Dicionário de tradução dos interesses
 interests_translation = {
 	"Activewear": "Roupas Esportivas",
