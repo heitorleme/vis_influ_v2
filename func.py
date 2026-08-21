@@ -138,17 +138,16 @@ def calcular_dispersao_likes_comentarios(influencers_nomes, api_key="7f728d8233m
         st.warning(f"Erro ao processar dados de '{perfil}': {e}")
 
 def consolidar_dados_de_perfil():
-    """
-    Consolida informações de perfil (seguidores, engajamento, etc.) a partir dos dados já carregados no session_state.
-    
-    Retorna:
-        pd.DataFrame: Tabela consolidada com dados de perfil por influenciador.
-    """
     dados_consolidados = {}
+
+    # Check if the key exists in session_state before iteration
+    if "influencers_nomes" not in st.session_state or "influencers_dados" not in st.session_state:
+        st.warning("Nenhum influenciador foi carregado no session_state ainda.")
+        return pd.DataFrame()
 
     for nome in st.session_state.influencers_nomes:
         try:
-            dados = st.session_state.influencers_dados[nome]
+            dados = st.session_state.influencers_dados.get(nome, {})
             perfil = dados.get("user_profile", {})
 
             engagement_rate = perfil.get("engagement_rate")
@@ -167,8 +166,9 @@ def consolidar_dados_de_perfil():
 
     try:
         df_consolidado = pd.DataFrame.from_dict(dados_consolidados, orient='index')
-        df_consolidado.reset_index(inplace=True)
-        df_consolidado.rename(columns={"index": "influencer"}, inplace=True)
+        if not df_consolidado.empty:
+            df_consolidado.reset_index(inplace=True)
+            df_consolidado.rename(columns={"index": "influencer"}, inplace=True)
         return df_consolidado
     except Exception as e:
         st.warning(f"Erro ao consolidar os dados: {e}")
