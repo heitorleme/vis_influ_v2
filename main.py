@@ -257,7 +257,7 @@ with abas[1]:
     perfis_e_dispersoes=st.session_state.perfis_e_dispersoes,
     df_classes_formatado=st.session_state.df_classes_formatado,
     df_educacao_formatado=st.session_state.df_educacao_formatado,
-    df_top_interesses_formatado=st.session_state.get("df_top_interesses", pd.DataFrame()),,
+    df_top_interesses_formatado=st.session_state.get("df_top_interesses", pd.DataFrame()),
     format_milhar=format_milhar,
     get_classes_sociais_formatadas=get_classes_sociais_formatadas,
     get_escolaridades_formatadas=get_escolaridades_formatadas
